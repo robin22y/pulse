@@ -1,7 +1,7 @@
 import { useState } from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from '../utils/supabaseClient.js'
-import { AlertCircle, CheckCircle2, Key, Lock, MessageCircle } from 'lucide-react'
+import PulseLogo from '../components/PulseLogo.jsx'
 
 const PIN_REGEX = /^\d{6}$/
 
@@ -10,28 +10,25 @@ const ChangePINPage = () => {
   const location = useLocation()
   const initialMessage = location.state?.message ?? ''
   const initialPin = location.state?.initialPin ?? ''
- 
-  const [currentPin, setCurrentPin] = useState(initialPin)
+
+  const [oldPin, setOldPin] = useState(initialPin)
   const [newPin, setNewPin] = useState('')
   const [confirmPin, setConfirmPin] = useState('')
-  const [error, setError] = useState(initialMessage ? '' : '')
-  const [infoMessage, setInfoMessage] = useState(initialMessage)
   const [loading, setLoading] = useState(false)
-  const [success, setSuccess] = useState(false)
+  const [error, setError] = useState('')
 
   const validate = () => {
-    if (!PIN_REGEX.test(currentPin)) return 'Current PIN must be 6 digits'
+    if (!PIN_REGEX.test(oldPin)) return 'Current PIN must be 6 digits'
     if (!PIN_REGEX.test(newPin)) return 'New PIN must be 6 digits'
     if (!PIN_REGEX.test(confirmPin)) return 'Confirm PIN must be 6 digits'
-    if (newPin === currentPin) return 'New PIN must be different from current PIN'
-    if (newPin !== confirmPin) return 'New PIN and confirm PIN must match'
+    if (newPin === oldPin) return 'New PIN must be different from current PIN'
+    if (newPin !== confirmPin) return 'PINs do not match'
     return null
   }
 
   const handleSubmit = async (event) => {
     event.preventDefault()
     setError('')
-    setInfoMessage('')
     const validationError = validate()
     if (validationError) {
       setError(validationError)
@@ -41,15 +38,22 @@ const ChangePINPage = () => {
     setLoading(true)
     try {
       const { data, error: rpcError } = await supabase.rpc('change_my_pin', {
-        p_old_pin: currentPin,
+        p_old_pin: oldPin,
         p_new_pin: newPin,
       })
 
       if (rpcError) throw rpcError
-      if (!data?.success) throw new Error(data?.error || 'Unable to change PIN')
+      if (!data?.success) throw new Error(data?.error || 'Failed to change PIN')
 
-      setSuccess(true)
-      setTimeout(() => navigate('/delivery', { replace: true }), 2000)
+      const staffUser = JSON.parse(localStorage.getItem('staff_user') || '{}')
+      const role = staffUser.role
+      if (role === 'delivery') {
+        navigate('/delivery', { replace: true })
+      } else if (role === 'office' || role === 'manager') {
+        navigate('/staff', { replace: true })
+      } else {
+        navigate('/dashboard', { replace: true })
+      }
     } catch (err) {
       setError(err.message || 'Unable to change PIN. Please try again.')
     } finally {
@@ -57,136 +61,72 @@ const ChangePINPage = () => {
     }
   }
 
-  const whatsappMessage = encodeURIComponent(
-    'Hi, I need help resetting my Pulse PIN. Please assist.',
-  )
-
-  const whatsappUrl = `https://wa.me/?text=${whatsappMessage}`
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#0b1220] via-[#0f1a2b] to-[#13213a] flex items-center justify-center px-4 py-12 text-slate-100">
-      <div className="w-full max-w-md rounded-3xl bg-white/5 p-8 shadow-2xl backdrop-blur-xl border border-white/10">
-        <div className="text-center space-y-3">
-          <div className="inline-flex items-center gap-3 rounded-full bg-primary/10 px-4 py-2">
-            <Key className="text-primary" size={20} />
-            <span className="text-xs font-semibold tracking-widest text-primary uppercase">
-              Change PIN
-            </span>
-          </div>
-          <h1 className="text-2xl font-semibold text-white">Secure Your Access</h1>
-          <p className="text-sm text-slate-300">
-            Update your 6-digit PIN regularly to keep your account secure.
-          </p>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 flex items-center justify-center p-4">
+      <div className="max-w-md w-full">
+        <div className="text-center mb-8">
+          <PulseLogo size="default" variant="default" />
+          <h2 className="text-2xl font-bold text-gray-900 mt-4">Change PIN</h2>
+          {initialMessage && <p className="text-orange-600 mt-2">{initialMessage}</p>}
         </div>
 
-        {(error || infoMessage) && (
-          <div
-            className={`mt-6 rounded-2xl border p-4 text-sm ${
-              error
-                ? 'border-red-500/40 bg-red-500/10 text-red-200'
-                : 'border-blue-500/40 bg-blue-500/10 text-blue-100'
-            }`}
-          >
-            <div className="flex items-start gap-2">
-              {error ? <AlertCircle size={18} /> : <Lock size={18} />}
-              <p>{error || infoMessage}</p>
+        <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-xl p-8 space-y-4">
+          {error && (
+            <div className="bg-red-50 border-l-4 border-red-500 p-4">
+              <p className="text-red-700 text-sm">{error}</p>
             </div>
+          )}
+
+          <div>
+            <label className="block text-sm font-semibold text-gray-900 mb-2">Current PIN</label>
+            <input
+              type="password"
+              inputMode="numeric"
+              maxLength={6}
+              value={oldPin}
+              onChange={(event) => setOldPin(event.target.value.replace(/\D/g, ''))}
+              required
+              className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 text-center text-2xl tracking-widest"
+              placeholder="••••••"
+            />
           </div>
-        )}
 
-        {success ? (
-          <div className="mt-8 space-y-4 text-center">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/20">
-              <CheckCircle2 size={36} className="text-emerald-400" />
-            </div>
-            <h2 className="text-xl font-semibold text-white">PIN changed successfully!</h2>
-            <p className="text-sm text-slate-300">Redirecting you to the dashboard...</p>
+          <div>
+            <label className="block text-sm font-semibold text-gray-900 mb-2">New PIN (6 digits)</label>
+            <input
+              type="password"
+              inputMode="numeric"
+              maxLength={6}
+              value={newPin}
+              onChange={(event) => setNewPin(event.target.value.replace(/\D/g, ''))}
+              required
+              className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 text-center text-2xl tracking-widest"
+              placeholder="••••••"
+            />
           </div>
-        ) : (
-          <form onSubmit={handleSubmit} className="mt-6 space-y-5">
-            <div>
-              <label className="mb-2 block text-sm font-semibold text-slate-200">
-                Current PIN
-              </label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                <input
-                  type="password"
-                  inputMode="numeric"
-                  pattern="\d{6}"
-                  maxLength={6}
-                  value={currentPin}
-                  onChange={(e) => setCurrentPin(e.target.value.replace(/\D/g, ''))}
-                  disabled={loading}
-                  required
-                  className="w-full rounded-2xl border border-white/10 bg-white/5 py-3 pl-11 pr-4 text-lg font-semibold tracking-[0.6em] text-white outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/40"
-                />
-              </div>
-            </div>
 
-            <div>
-              <label className="mb-2 block text-sm font-semibold text-slate-200">
-                New PIN
-              </label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                <input
-                  type="password"
-                  inputMode="numeric"
-                  pattern="\d{6}"
-                  maxLength={6}
-                  value={newPin}
-                  onChange={(e) => setNewPin(e.target.value.replace(/\D/g, ''))}
-                  disabled={loading}
-                  required
-                  className="w-full rounded-2xl border border-white/10 bg-white/5 py-3 pl-11 pr-4 text-lg font-semibold tracking-[0.6em] text-white outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/40"
-                />
-              </div>
-            </div>
+          <div>
+            <label className="block text-sm font-semibold text-gray-900 mb-2">Confirm New PIN</label>
+            <input
+              type="password"
+              inputMode="numeric"
+              maxLength={6}
+              value={confirmPin}
+              onChange={(event) => setConfirmPin(event.target.value.replace(/\D/g, ''))}
+              required
+              className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 text-center text-2xl tracking-widest"
+              placeholder="••••••"
+            />
+          </div>
 
-            <div>
-              <label className="mb-2 block text-sm font-semibold text-slate-200">
-                Confirm New PIN
-              </label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                <input
-                  type="password"
-                  inputMode="numeric"
-                  pattern="\d{6}"
-                  maxLength={6}
-                  value={confirmPin}
-                  onChange={(e) => setConfirmPin(e.target.value.replace(/\D/g, ''))}
-                  disabled={loading}
-                  required
-                  className="w-full rounded-2xl border border-white/10 bg-white/5 py-3 pl-11 pr-4 text-lg font-semibold tracking-[0.6em] text-white outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/40"
-                />
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full rounded-2xl bg-primary px-4 py-3 text-sm font-semibold tracking-wide text-white transition hover:bg-primary-dark disabled:cursor-not-allowed disabled:bg-primary/60"
-            >
-              {loading ? 'Updating PIN...' : 'Update PIN'}
-            </button>
-          </form>
-        )}
-
-        <div className="mt-8 flex flex-col items-center gap-3 text-sm text-slate-300">
-          <p className="flex items-center gap-2">
-            <MessageCircle size={16} className="text-primary" /> Forgot PIN? Contact the office.
-          </p>
-          <a
-            href={whatsappUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex items-center gap-2 rounded-full border border-primary/40 bg-primary/20 px-4 py-2 text-sm font-semibold text-primary transition hover:bg-primary/30"
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold rounded-lg hover:shadow-lg disabled:opacity-50 transition-all"
           >
-            <MessageCircle size={16} /> WhatsApp Office
-          </a>
-        </div>
+            {loading ? 'Changing PIN...' : 'Change PIN'}
+          </button>
+        </form>
       </div>
     </div>
   )

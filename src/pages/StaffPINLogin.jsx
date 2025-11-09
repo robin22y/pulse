@@ -7,7 +7,7 @@ import PulseLogo from '../components/PulseLogo.jsx'
 const PIN_KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'clear', '0', 'back']
 
 const StaffPINLogin = () => {
-  const { business, staff } = useParams()
+  const { ownerId: legacyOwnerId, business, staff } = useParams()
   const navigate = useNavigate()
   const [pin, setPin] = useState('')
   const [loading, setLoading] = useState(false)
@@ -28,7 +28,17 @@ const StaffPINLogin = () => {
       setLocked(false)
       setOwnerId(null)
       setStaffInfo(null)
+
       try {
+        if (legacyOwnerId) {
+          const trimmedOwnerId = legacyOwnerId.trim()
+          if (!trimmedOwnerId) throw new Error('Invalid owner identifier.')
+          setOwnerId(trimmedOwnerId)
+          setInfoMessage('Enter your PIN to continue.')
+          setStaffInfo(null)
+          return
+        }
+
         if (!business || !staff) {
           throw new Error('Invalid login link.')
         }
@@ -89,7 +99,7 @@ const StaffPINLogin = () => {
     }
 
     resolveLink()
-  }, [business, staff])
+  }, [legacyOwnerId, business, staff])
 
   const maskedPin = useMemo(() => pin.padEnd(6, '•'), [pin])
 
@@ -109,7 +119,7 @@ const StaffPINLogin = () => {
   }
 
   const handleVerify = async () => {
-    if (pin.length < 4 || !ownerId || resolving) {
+    if (pin.length !== 6 || !ownerId || resolving) {
       setError('Enter your 6-digit PIN')
       return
     }
@@ -143,30 +153,49 @@ const StaffPINLogin = () => {
           refresh_token: data.session.refresh_token,
         })
         if (setSessionError) {
-          throw setSessionError
+          console.error('Failed to set session from PIN login', setSessionError)
         }
+      }
+
+      if (data?.user_id) {
+        const staffRecord = {
+          id: data.user_id,
+          name: data.full_name ?? staffInfo?.full_name ?? '',
+          role: data.role,
+          owner_id: data.owner_id ?? ownerId,
+        }
+        localStorage.setItem('staff_user', JSON.stringify(staffRecord))
       }
 
       if (data?.must_change_pin) {
         navigate('/change-pin', {
+          state: {
+            message: data.pin_expired
+              ? 'Your PIN has expired. Please change it.'
+              : 'Please change your PIN for security.',
+            initialPin: pin,
+          },
           replace: true,
-          state: { message: 'You need to change your PIN before continuing.', initialPin: pin },
         })
         return
       }
 
-      if (data?.pin_expired) {
-        navigate('/change-pin', {
-          replace: true,
-          state: { message: 'Your PIN has expired. Please change it now.', initialPin: pin },
-        })
-        return
+      const redirectRole = data?.role ?? staffInfo?.role ?? 'delivery'
+      switch (redirectRole) {
+        case 'delivery':
+          navigate('/delivery', { replace: true })
+          break
+        case 'office':
+        case 'manager':
+          navigate('/staff', { replace: true })
+          break
+        default:
+          navigate('/dashboard', { replace: true })
       }
-
-      const redirectTo = data?.redirect_to || '/delivery'
-      navigate(redirectTo, { replace: true })
     } catch (err) {
-      setError(err.message || 'Unable to verify PIN. Please try again.')
+      console.error('Login error:', err)
+      setError(err.message || 'Login failed')
+      setPin('')
     } finally {
       setLoading(false)
     }
@@ -201,11 +230,11 @@ const StaffPINLogin = () => {
             <PulseLogo size="default" variant="white" />
           </div>
           <p className="text-sm text-slate-300">
-            Business code: {business ?? '—'} • Staff code: {staff ?? '—'}
+            {legacyOwnerId
+              ? `Owner ID: ${legacyOwnerId}`
+              : `Business code: ${business ?? '—'} • Staff code: ${staff ?? '—'}`}
           </p>
-          {staffInfo && (
-            <p className="text-xs text-slate-400">Staff: {staffInfo.full_name}</p>
-          )}
+          {staffInfo && <p className="text-xs text-slate-400">Staff: {staffInfo.full_name}</p>}
         </div>
 
         <div className="mt-6 rounded-2xl border border-white/10 bg-white/5 py-6 text-center">
@@ -219,9 +248,7 @@ const StaffPINLogin = () => {
             <div>
               <p>{error}</p>
               {attemptsRemaining != null && !locked && (
-                <p className="mt-1 text-red-300/80 text-xs">
-                  Attempts remaining: {attemptsRemaining}
-                </p>
+                <p className="mt-1 text-red-300/80 text-xs">Attempts remaining: {attemptsRemaining}</p>
               )}
             </div>
           </div>
@@ -257,9 +284,7 @@ const StaffPINLogin = () => {
           {loading ? 'Verifying...' : 'Unlock'}
         </button>
 
-        <p className="mt-6 text-center text-xs text-slate-400">
-          Trouble logging in? Contact your office for a PIN reset.
-        </p>
+        <p className="mt-6 text-center text-xs text-slate-400">Trouble logging in? Contact your office for a PIN reset.</p>
       </div>
     </div>
   )
