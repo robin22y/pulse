@@ -33,12 +33,26 @@ const StockLocationTracker = () => {
             `
             id,
             dc_number,
-            hospital:hospitals(id, name, city, state),
+            total_value,
             delivery_timestamp,
             delivery_latitude,
             delivery_longitude,
-            total_value,
-            consignment_items(quantity, price, product:products(id, brand_name, size))
+            hospital:hospitals(
+              id,
+              name,
+              city,
+              state,
+              pincode
+            ),
+            items:consignment_items(
+              quantity,
+              unit_price,
+              product:products(
+                id,
+                brand_name,
+                size
+              )
+            )
             `,
           )
           .eq('owner_id', ownerId)
@@ -76,7 +90,7 @@ const StockLocationTracker = () => {
       if (filters.hospital_id && record.hospital?.id !== filters.hospital_id) return false
       if (
         filters.product_id &&
-        !record.consignment_items.some((item) => item.product?.id === filters.product_id)
+        !(record.items ?? []).some((item) => item.product?.id === filters.product_id)
       ) {
         return false
       }
@@ -93,13 +107,13 @@ const StockLocationTracker = () => {
     const header = ['DC Number', 'Hospital', 'Product', 'Quantity', 'Value', 'Delivery Date']
     const rows = []
     filteredRecords.forEach((record) => {
-      record.consignment_items.forEach((item) => {
+      ;(record.items ?? []).forEach((item) => {
         rows.push([
           record.dc_number,
           record.hospital?.name ?? '',
           item.product?.brand_name ?? '',
           item.quantity,
-          (item.price ?? 0) * (item.quantity ?? 0),
+          Number(item.unit_price ?? 0) * Number(item.quantity ?? 0),
           record.delivery_timestamp ?? '',
         ])
       })
@@ -219,7 +233,7 @@ const StockLocationTracker = () => {
                 </div>
 
                 <div className="mt-3 flex flex-col gap-2 text-sm text-white/70">
-                  {record.consignment_items.map((item) => (
+                  {record.items.map((item) => (
                     <div
                       key={`${record.id}-${item.product?.id}`}
                       className="flex items-center justify-between rounded-2xl bg-slate-900/60 px-4 py-2"
@@ -233,7 +247,7 @@ const StockLocationTracker = () => {
                       <div className="text-right">
                         <p>Qty {item.quantity}</p>
                         <p className="text-xs text-white/50">
-                          Value ₹{((item.price ?? 0) * (item.quantity ?? 0)).toFixed(2)}
+                          Value ₹{((item.unit_price ?? 0) * (item.quantity ?? 0)).toFixed(2)}
                         </p>
                       </div>
                     </div>

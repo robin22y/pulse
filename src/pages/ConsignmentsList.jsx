@@ -75,10 +75,39 @@ const ConsignmentsList = () => {
       let query = supabase
         .from('consignments')
         .select(
-          `id, dc_number, status, billing_status, payment_status, total_value, created_at,
-           hospital_id, branch_id,
-           hospital:hospitals(name, city, address, gstin, drug_license_number, contact_person, contact_phone, email, pincode, state),
-           branch:branches(name)`,
+          `
+          id,
+          dc_number,
+          status,
+          billing_status,
+          payment_status,
+          total_value,
+          created_at,
+          hospital_id,
+          branch_id,
+          hospital:hospitals(
+            id,
+            name,
+            city,
+            address,
+            state,
+            pincode,
+            gstin,
+            drug_license_number,
+            contact_person,
+            contact_phone,
+            email
+          ),
+          branch:branches(
+            id,
+            name,
+            city,
+            state
+          ),
+          prepared_by_user:users!consignments_prepared_by_fkey(id, full_name, role),
+          delivered_by_user:users!consignments_delivered_by_fkey(id, full_name, role),
+          billed_by_user:users!consignments_billed_by_fkey(id, full_name, role)
+          `,
         )
         .eq('owner_id', ownerId)
         .order('created_at', { ascending: false })

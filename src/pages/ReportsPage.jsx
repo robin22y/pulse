@@ -59,8 +59,9 @@ const ReportsPage = () => {
             delivery_timestamp,
             hospital:hospitals(id, name),
             branch:branches(id, name),
-            staff:users(id, full_name),
-            consignment_items(count)`,
+            delivery_staff:users!consignments_delivery_staff_id_fkey(id, full_name, role),
+            items:consignment_items(count)
+            `,
           )
           .eq('owner_id', ownerId),
         supabase.from('hospitals').select('id, name').eq('owner_id', ownerId),
@@ -99,7 +100,7 @@ const ReportsPage = () => {
       if (filters.hospital_id && row.hospital?.id !== filters.hospital_id) return false
       if (filters.status && row.status !== filters.status) return false
       if (filters.branch_id && row.branch?.id !== filters.branch_id) return false
-      if (filters.staff_id && row.staff?.id !== filters.staff_id) return false
+      if (filters.staff_id && row.delivery_staff?.id !== filters.staff_id) return false
       return true
     })
   }, [dataset, filters])
@@ -166,10 +167,10 @@ const ReportsPage = () => {
 
   const topStaff = useMemo(() => {
     const buckets = filteredData.reduce((acc, row) => {
-      if (!row.staff?.id) return acc
-      const key = row.staff.id
+      if (!row.delivery_staff?.id) return acc
+      const key = row.delivery_staff.id
       if (!acc[key]) {
-        acc[key] = { name: row.staff.full_name, delivered: 0, value: 0 }
+        acc[key] = { name: row.delivery_staff.full_name, delivered: 0, value: 0 }
       }
       if (row.status === 'delivered') {
         acc[key].delivered += 1
@@ -210,7 +211,7 @@ const ReportsPage = () => {
       DC: row.dc_number,
       Hospital: row.hospital?.name ?? '',
       Branch: row.branch?.name ?? '',
-      Staff: row.staff?.full_name ?? '',
+      Staff: row.delivery_staff?.full_name ?? '',
       Status: row.status,
       Value: row.total_value,
       Created: row.created_at,

@@ -23,7 +23,24 @@ const DeliveryApp = () => {
       const { data, error: fetchError } = await supabase
         .from('consignments')
         .select(
-          'id, dc_number, hospital:hospitals(name, city), branch:branches(name), total_value, status, consignment_items(id, quantity, product:products(brand_name, size)), delivery_latitude, delivery_longitude, delivery_timestamp',
+          `
+          id,
+          dc_number,
+          total_value,
+          status,
+          created_at,
+          hospital:hospitals(id, name, city, state),
+          branch:branches(id, name, city, state),
+          items:consignment_items(
+            id,
+            quantity,
+            product:products(id, brand_name, size)
+          ),
+          delivery_latitude,
+          delivery_longitude,
+          delivery_timestamp,
+          signed_proof_url
+          `,
         )
         .eq('delivery_staff_id', profile.id)
         .not('status', 'eq', 'delivered')
@@ -226,7 +243,7 @@ const DeliveryApp = () => {
             <div className="mt-4">
               <h4 className="text-sm uppercase tracking-widest text-white/40">Products</h4>
               <div className="mt-3 flex flex-col gap-3">
-                {selected.consignment_items?.map((item) => (
+                {selected.items?.map((item) => (
                   <div
                     key={item.id}
                     className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3"

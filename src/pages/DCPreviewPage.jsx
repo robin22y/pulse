@@ -30,32 +30,122 @@ const DCPreviewPage = () => {
       setLoading(true)
       setError('')
       try {
-        const [{ data: settings, error: settingsError }, { data, error: consignmentError }, { data: payments, error: paymentsError }] =
-          await Promise.all([
-            supabase
-              .from('owner_settings')
-              .select('*')
-              .eq('owner_id', ownerId)
-              .maybeSingle(),
-            supabase
-              .from('consignments')
-              .select(
-                `id, dc_number, total_value, created_at, status, billing_status, payment_status,
-                 hospital:hospitals(*),
-                 branch:branches(*),
-                 prepared_by_user:users!consignments_prepared_by_fkey(full_name),
-                 items:consignment_items(id, product_id, stock_item_id, item_name, brand_name, size, quantity, unit_price, tax_percentage, manufacturing_date, expiry_date, batch_number)`
+        const [
+          { data: settings, error: settingsError },
+          { data, error: consignmentError },
+          { data: payments, error: paymentsError },
+        ] = await Promise.all([
+          supabase
+            .from('owner_settings')
+            .select(
+              `
+              company_name,
+              company_address,
+              company_city,
+              company_state,
+              company_pincode,
+              company_phone,
+              company_email,
+              company_website,
+              company_gstin,
+              company_pan,
+              company_drug_license,
+              company_logo_url
+              `,
+            )
+            .eq('owner_id', ownerId)
+            .maybeSingle(),
+          supabase
+            .from('consignments')
+            .select(
+              `
+              id,
+              owner_id,
+              hospital_id,
+              branch_id,
+              dc_number,
+              status,
+              billing_status,
+              payment_status,
+              total_value,
+              created_at,
+              delivered_at,
+              delivery_timestamp,
+              billed_amount,
+              billed_date,
+              payment_received_at,
+              hospital:hospitals(
+                id,
+                name,
+                address,
+                city,
+                state,
+                pincode,
+                gstin,
+                drug_license_number,
+                contact_person,
+                contact_phone,
+                email
+              ),
+              branch:branches(
+                id,
+                name,
+                city,
+                state
+              ),
+              prepared_by_user:users!consignments_prepared_by_fkey(
+                id,
+                full_name,
+                email,
+                role
+              ),
+              delivered_by_user:users!consignments_delivered_by_fkey(
+                id,
+                full_name,
+                email,
+                role
+              ),
+              billed_by_user:users!consignments_billed_by_fkey(
+                id,
+                full_name,
+                email,
+                role
+              ),
+              payment_received_by_user:users!consignments_payment_received_by_fkey(
+                id,
+                full_name,
+                email,
+                role
+              ),
+              items:consignment_items(
+                id,
+                product_id,
+                stock_item_id,
+                item_name,
+                brand_name,
+                size,
+                quantity,
+                unit_price,
+                tax_percentage,
+                manufacturing_date,
+                expiry_date,
+                batch_number
               )
-              .eq('owner_id', ownerId)
-              .eq('id', id)
-              .single(),
-            supabase
-              .from('payment_records')
-              .select(`id, payment_amount, payment_method, payment_reference, payment_date, notes, received_by_user:users!payment_records_received_by_fkey(full_name)`)
-              .eq('owner_id', ownerId)
-              .eq('consignment_id', id)
-              .order('payment_date', { ascending: false }),
-          ])
+              `,
+            )
+            .eq('owner_id', ownerId)
+            .eq('id', id)
+            .single(),
+          supabase
+            .from('payment_records')
+            .select(
+              `id, payment_amount, payment_method, payment_reference, payment_date, notes,
+               received_by_user:users!payment_records_received_by_fkey(full_name)`
+            )
+            .eq('owner_id', ownerId)
+            .eq('consignment_id', id)
+            .order('payment_date', { ascending: false }),
+        ])
 
         if (settingsError && settingsError.code !== 'PGRST116') {
           console.warn('Company settings not found', settingsError)
@@ -92,7 +182,9 @@ const DCPreviewPage = () => {
 
   const shareWhatsApp = () => {
     if (!consignment) return
-    const text = `Delivery Challan: ${consignment.dc_number}\nHospital: ${consignment.hospital?.name}\nTotal: ${formatCurrency(consignment.total_value)}\n\nView: ${window.location.href}`
+    const text = `Delivery Challan: ${consignment.dc_number}\nHospital: ${consignment.hospital?.name}\nTotal: ${formatCurrency(
+      consignment.total_value,
+    )}\n\nView: ${window.location.href}`
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`)
   }
 
@@ -120,47 +212,69 @@ const DCPreviewPage = () => {
     )
   }
 
+  const ActionButtons = ({ className = '' }) => (
+    <div className={`flex w-full flex-wrap items-center gap-2 ${className}`}>
+      <button
+        onClick={shareWhatsApp}
+        className="flex-1 rounded-xl bg-emerald-500 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-emerald-500/30 transition hover:bg-emerald-600 active:scale-95"
+      >
+        <span className="inline-flex items-center justify-center gap-2">
+          <Share2 size={18} /> Share
+        </span>
+      </button>
+      <button
+        onClick={() => window.print()}
+        className="flex-1 rounded-xl bg-blue-500 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-500/30 transition hover:bg-blue-600 active:scale-95"
+      >
+        <span className="inline-flex items-center justify-center gap-2">
+          <Printer size={18} /> Print
+        </span>
+      </button>
+      <button
+        onClick={downloadPDF}
+        className="flex-1 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-600/30 transition hover:shadow-blue-600/40 active:scale-95"
+      >
+        <span className="inline-flex items-center justify-center gap-2">
+          <Download size={18} /> PDF
+        </span>
+      </button>
+    </div>
+  )
+
   return (
-    <div className="min-h-screen bg-slate-100 p-4">
-      <div className="mx-auto mb-4 flex max-w-5xl items-center justify-between gap-2 print:hidden">
-        <button
-          onClick={() => navigate(-1)}
-          className="inline-flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-medium text-slate-600 shadow hover:shadow-md"
-        >
-          <ArrowLeft size={18} /> Back
-        </button>
-        <div className="flex flex-wrap items-center gap-2">
+    <div className="min-h-screen bg-slate-100 pb-28 md:bg-slate-50 md:pb-8">
+      <div className="mx-auto flex max-w-5xl flex-col gap-4 px-4 py-6 md:px-6">
+        <div className="hidden items-center justify-between gap-2 md:flex">
           <button
-            onClick={shareWhatsApp}
-            className="inline-flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-green-700"
+            onClick={() => navigate(-1)}
+            className="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2 text-sm font-medium text-slate-600 shadow hover:shadow-md"
           >
-            <Share2 size={18} /> Share
+            <ArrowLeft size={18} /> Back
           </button>
-          <button
-            onClick={() => window.print()}
-            className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700"
-          >
-            <Printer size={18} /> Print
-          </button>
-          <button
-            onClick={downloadPDF}
-            className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-blue-600 to-purple-600 px-4 py-2 text-sm font-semibold text-white transition hover:shadow-lg"
-          >
-            <Download size={18} /> Download PDF
-          </button>
+          <ActionButtons className="max-w-lg" />
+        </div>
+
+        <div id="dc-content" className="mx-auto w-full">
+          <DCPreview
+            company={companySettings || {}}
+            hospital={consignment.hospital || {}}
+            branch={consignment.branch || {}}
+            dcNumber={consignment.dc_number}
+            items={consignment.items || []}
+            payments={paymentRecords}
+            createdAt={consignment.created_at}
+          />
         </div>
       </div>
 
-      <div id="dc-content" className="mx-auto max-w-5xl">
-        <DCPreview
-          company={companySettings || {}}
-          hospital={consignment.hospital || {}}
-          branch={consignment.branch || {}}
-          dcNumber={consignment.dc_number}
-          items={consignment.items || []}
-          payments={paymentRecords}
-          createdAt={consignment.created_at}
-        />
+      <div className="action-buttons fixed bottom-0 left-0 right-0 z-40 border-t border-slate-200 bg-white/95 px-4 py-3 shadow-[0_-8px_24px_rgba(15,23,42,0.12)] backdrop-blur md:hidden">
+        <button
+          onClick={() => navigate(-1)}
+          className="mr-2 inline-flex items-center justify-center rounded-xl bg-slate-200 px-3 py-3 text-sm font-semibold text-slate-700"
+        >
+          <ArrowLeft size={18} />
+        </button>
+        <ActionButtons />
       </div>
     </div>
   )

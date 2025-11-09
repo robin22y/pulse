@@ -13,32 +13,27 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
+import {
+  Menu,
+  Plus,
+  FileText,
+  Package,
+  ShoppingBag,
+  Building2,
+  Users,
+  BarChart3,
+  Settings,
+  PackageSearch,
+  PackagePlus,
+} from 'lucide-react'
 import FluentCard from '../components/FluentCard.jsx'
 import { useAuth } from '../contexts/AuthContext.jsx'
 import { supabase } from '../utils/supabaseClient.js'
-import { Package, PackagePlus } from 'lucide-react'
-
-const StatCard = ({ label, value, accent }) => (
-  <FluentCard
-    glass
-    className={`flex flex-col gap-3 ${accent ? 'border-primary/30 bg-primary/20' : ''}`}
-  >
-    <span className="text-xs uppercase tracking-widest text-white/50">{label}</span>
-    <span className="text-2xl font-semibold text-white/90">{value}</span>
-  </FluentCard>
-)
-
-const QuickActionButton = ({ label, onClick }) => (
-  <button
-    onClick={onClick}
-    className="flex flex-col gap-2 rounded-2xl border border-primary/20 bg-primary/15 p-4 text-left text-sm text-white/80 transition hover:-translate-y-1 hover:bg-primary/25"
-  >
-    <span className="text-lg font-semibold text-white">{label}</span>
-    <span className="text-xs text-white/60">
-      Manage {label.toLowerCase()} with streamlined forms.
-    </span>
-  </button>
-)
+import NavTile from '../components/dashboard/NavTile.jsx'
+import StatCard from '../components/dashboard/StatCard.jsx'
+import RecentDCCard from '../components/dashboard/RecentDCCard.jsx'
+import PageHeader from '../components/layout/PageHeader.jsx'
+import PulseLogo from '../components/PulseLogo.jsx'
 
 const OwnerDashboard = () => {
   const navigate = useNavigate()
@@ -79,9 +74,10 @@ const OwnerDashboard = () => {
             .order('created_at', { ascending: false })
             .limit(120),
           supabase
-            .from('inventory')
-            .select('id, quantity, product:products(id, brand_name, price)')
-            .eq('owner_id', ownerId),
+            .from('consignments')
+            .select('id')
+            .eq('owner_id', ownerId)
+            .eq('status', 'delivered'),
           supabase
             .from('users')
             .select('id, full_name, role, owner_id, manager_id')
@@ -90,8 +86,7 @@ const OwnerDashboard = () => {
             .from('stock_items')
             .select('quantity_available, unit_price')
             .eq('owner_id', ownerId),
-          supabase
-            .rpc('get_product_directory_stats', { p_owner_id: ownerId }),
+          supabase.rpc('get_product_directory_stats', { p_owner_id: ownerId }),
         ])
 
         if (consignmentError || deliveryError || staffError || inventoryError) {
@@ -100,15 +95,15 @@ const OwnerDashboard = () => {
 
         setConsignments(consignmentData ?? [])
         setInventory(inventoryData ?? [])
-        setUsers(usersData ?? [])
+        setUsers(staffData ?? [])
         setOverview({
           consignments: consignmentData?.length ?? 0,
           deliveries: deliveryData?.length ?? 0,
           staff: staffData?.length ?? 0,
-          inventoryValue: inventoryData.reduce((total, item) => {
-            const price = Number(item.product?.price ?? 0)
-            return total + price * Number(item.quantity ?? 0)
-          }, 0),
+          inventoryValue: inventoryData?.reduce((total, item) => {
+            const price = Number(item.unit_price ?? 0)
+            return total + price * Number(item.quantity_available ?? 0)
+          }, 0) ?? 0,
           products: productError ? 0 : productStats?.total_products ?? 0,
           productsInStock: productError ? 0 : productStats?.products_in_stock ?? 0,
         })
@@ -147,8 +142,8 @@ const OwnerDashboard = () => {
   const stockValue = useMemo(
     () =>
       inventory.reduce((total, item) => {
-        const price = Number(item.product?.price ?? 0)
-        return total + price * Number(item.quantity ?? 0)
+        const price = Number(item.unit_price ?? 0)
+        return total + price * Number(item.quantity_available ?? 0)
       }, 0),
     [inventory],
   )
@@ -203,180 +198,310 @@ const OwnerDashboard = () => {
 
   const recentConsignments = useMemo(() => consignments.slice(0, 6), [consignments])
 
+  const quickStats = [
+    {
+      label: 'Total Value',
+      value: `₹${totalConsignmentValue.toLocaleString()}`,
+      icon: PackageSearch,
+      tone: 'blue',
+    },
+    {
+      label: 'Delivered (30d)',
+      value: deliveredThisMonth,
+      icon: PackagePlus,
+      tone: 'emerald',
+    },
+    {
+      label: 'In Transit',
+      value: inTransitCount,
+      icon: Package,
+      tone: 'amber',
+    },
+    {
+      label: 'Inventory Value',
+      value: `₹${stockValue.toLocaleString()}`,
+      icon: ShoppingBag,
+      tone: 'indigo',
+    },
+  ]
+
+  const tiles = [
+    { icon: Plus, label: 'New DC', subtitle: 'Create consignment', color: 'blue', to: '/consignments/create' },
+    { icon: FileText, label: 'All DCs', subtitle: 'View & manage', color: 'indigo', to: '/owner/consignments' },
+    { icon: Package, label: 'Stock', subtitle: 'Manage inventory', color: 'green', to: '/owner/stock' },
+    { icon: ShoppingBag, label: 'Products', subtitle: 'Product catalog', color: 'purple', to: '/owner/products' },
+    { icon: Building2, label: 'Hospitals', subtitle: 'Client list', color: 'cyan', to: '/owner/hospitals' },
+    { icon: Users, label: 'Staff', subtitle: 'Team management', color: 'orange', to: '/owner/staff' },
+    { icon: Settings, label: 'Settings', subtitle: 'Configure app', color: 'gray', to: '/owner/settings' },
+  ]
+
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-2">
-        <h2 className="text-2xl font-semibold tracking-tight text-white">
-          Owner Dashboard
-        </h2>
-        <p className="text-sm text-white/60">
-          Welcome back {profile?.full_name ?? profile?.email}. Here is a snapshot of your operations.
-        </p>
-      </div>
+    <>
+      <PageHeader
+        title="Owner Dashboard"
+        description={`Welcome back ${profile?.full_name ?? profile?.email ?? ''}. Here is a snapshot of your operations.`}
+        actions={null}
+      />
+      <div className="flex flex-col gap-6">
+        {/* Mobile Experience */}
+        <div className="mobile-dashboard flex flex-col bg-slate-950 md:hidden">
+          <div className="space-y-6 pb-24 pt-6">
+            {error && (
+              <div className="mx-4 rounded-2xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-200">
+                {error}
+              </div>
+            )}
 
-      {error && (
-        <div className="rounded-2xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-200">
-          {error}
-        </div>
-      )}
+            <section className="no-scrollbar flex gap-3 overflow-x-auto px-4">
+              {quickStats.map((stat) => (
+                <StatCard key={stat.label} {...stat} />
+              ))}
+            </section>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard label="Total Consignments Value" value={`₹${totalConsignmentValue.toLocaleString()}`} accent />
-        <StatCard label="Delivered This Month" value={deliveredThisMonth} />
-        <StatCard label="In Transit" value={inTransitCount} />
-        <StatCard label="Total Stock Value" value={`₹${stockValue.toLocaleString()}`} />
-      </div>
+            <section className="px-4">
+              <div className="grid grid-cols-2 gap-3">
+                {tiles.map((tile) => (
+                  <NavTile key={tile.label} {...tile} />
+                ))}
+              </div>
+            </section>
 
-      <FluentCard glass className="grid gap-4 sm:grid-cols-4">
-        <QuickActionButton label="Add Staff" onClick={() => navigate('/owner/staff')} />
-        <QuickActionButton label="Add Branch" onClick={() => navigate('/owner/branches')} />
-        <QuickActionButton label="Add Hospital" onClick={() => navigate('/owner/hospitals')} />
-        <QuickActionButton label="View Reports" onClick={() => navigate('/owner/reports')} />
-      </FluentCard>
-
-      <div className="grid gap-6 lg:grid-cols-3">
-        <FluentCard glass className="lg:col-span-2">
-          <div className="mb-4 flex items-center justify-between">
-            <h3 className="text-lg font-semibold text-white">Monthly Delivery Trends</h3>
-            <span className="text-xs uppercase text-white/40">Last 6 months</span>
-          </div>
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={monthTrends}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
-                <XAxis dataKey="month" stroke="#94A3B8" />
-                <YAxis stroke="#94A3B8" />
-                <Tooltip
-                  contentStyle={{ backgroundColor: '#0f1115', borderRadius: '1rem', border: '1px solid rgba(148,163,184,0.3)' }}
-                  labelStyle={{ color: '#fff' }}
-                />
-                <Line type="monotone" dataKey="value" stroke="#3B82F6" strokeWidth={3} dot={false} />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </FluentCard>
-
-        <FluentCard glass>
-          <div className="mb-4 flex items-center justify-between">
-            <h3 className="text-lg font-semibold text-white">Consignments by Status</h3>
-          </div>
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={statusDistribution}
-                  dataKey="value"
-                  nameKey="status"
-                  innerRadius={50}
-                  outerRadius={80}
-                  paddingAngle={4}
-                  fill="#8884d8"
-                />
-                <Tooltip
-                  contentStyle={{ backgroundColor: '#0f1115', borderRadius: '1rem', border: '1px solid rgba(148,163,184,0.3)' }}
-                  labelStyle={{ color: '#fff' }}
-                />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-        </FluentCard>
-      </div>
-
-      <div className="grid gap-6 lg:grid-cols-2">
-        <FluentCard glass>
-          <div className="mb-4 flex items-center justify-between">
-            <h3 className="text-lg font-semibold text-white">Top Hospitals by Value</h3>
-          </div>
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={topHospitals}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
-                <XAxis dataKey="hospital" stroke="#94A3B8" />
-                <YAxis stroke="#94A3B8" />
-                <Tooltip
-                  contentStyle={{ backgroundColor: '#0f1115', borderRadius: '1rem', border: '1px solid rgba(148,163,184,0.3)' }}
-                  labelStyle={{ color: '#fff' }}
-                />
-                <Bar dataKey="total" fill="#2563EB" radius={[10, 10, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </FluentCard>
-
-        <FluentCard glass>
-          <div className="mb-4 flex items-center justify-between">
-            <h3 className="text-lg font-semibold text-white">Recent Consignments</h3>
-            <span className="text-xs text-white/40">Latest updates</span>
-          </div>
-          <div className="flex flex-col gap-3">
-            {recentConsignments.map((consignment) => (
-              <div
-                key={consignment.id}
-                className="flex items-center justify-between rounded-2xl border border-white/5 bg-white/5 px-4 py-3"
-              >
-                <div>
-                  <p className="text-sm font-semibold text-white">
-                    {consignment.dc_number ?? `#${consignment.id.slice(-6)}`}
-                  </p>
-                  <p className="text-xs text-white/50">
-                    {new Date(consignment.created_at).toLocaleString()}
-                  </p>
-                </div>
-                <span
-                  className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wider ${
-                    consignment.status === 'delivered'
-                      ? 'bg-emerald-400/10 text-emerald-300'
-                      : consignment.status === 'in_transit'
-                        ? 'bg-amber-400/10 text-amber-300'
-                        : 'bg-slate-400/10 text-slate-200'
-                  }`}
+            <section className="space-y-3 px-4">
+              <div className="flex items-center justify-between text-white">
+                <h2 className="text-lg font-semibold">Recent DCs</h2>
+                <button
+                  onClick={() => navigate('/owner/consignments')}
+                  className="text-xs font-medium text-blue-200 underline"
                 >
-                  {consignment.status ?? 'unknown'}
+                  View all
+                </button>
+              </div>
+              <div className="space-y-2">
+                {recentConsignments.slice(0, 4).map((consignment) => (
+                  <RecentDCCard
+                    key={consignment.id}
+                    dcNumber={consignment.dc_number ?? `#${consignment.id.slice(-6)}`}
+                    createdAt={consignment.created_at}
+                    status={consignment.status ?? 'prepared'}
+                    value={consignment.total_value}
+                  />
+                ))}
+                {!recentConsignments.length && (
+                  <p className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/60">
+                    No consignments yet. Create your first DC!
+                  </p>
+                )}
+              </div>
+            </section>
+
+            <section className="px-4">
+              <FluentCard glass className="bg-white/5">
+                <div className="mb-4 flex items-center justify-between">
+                  <h3 className="text-base font-semibold text-white">Monthly Trends</h3>
+                  <span className="text-xs uppercase text-white/60">Last 6 months</span>
+                </div>
+                <div className="h-52">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={monthTrends}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
+                      <XAxis dataKey="month" stroke="#C7D2FE" hide />
+                      <YAxis stroke="#C7D2FE" hide />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: 'rgba(15,17,21,0.9)',
+                          borderRadius: '1rem',
+                          border: '1px solid rgba(148,163,184,0.3)',
+                        }}
+                        labelStyle={{ color: '#fff' }}
+                      />
+                      <Line type="monotone" dataKey="value" stroke="#38BDF8" strokeWidth={3} dot={false} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </FluentCard>
+            </section>
+          </div>
+        </div>
+
+        {/* Desktop Experience */}
+        <div className="hidden flex-col gap-6 md:flex">
+          {error && (
+            <div className="rounded-2xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-200">
+              {error}
+            </div>
+          )}
+
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <StatCard label="Total Consignments Value" value={`₹${totalConsignmentValue.toLocaleString()}`} tone="blue" />
+            <StatCard label="Delivered This Month" value={deliveredThisMonth} tone="emerald" />
+            <StatCard label="In Transit" value={inTransitCount} tone="amber" />
+            <StatCard label="Total Stock Value" value={`₹${stockValue.toLocaleString()}`} tone="indigo" />
+          </div>
+
+          <FluentCard glass className="grid gap-4 sm:grid-cols-4">
+            <button
+              onClick={() => navigate('/owner/staff')}
+              className="flex flex-col gap-2 rounded-2xl border border-primary/20 bg-primary/15 p-4 text-left text-sm text-white/80 transition hover:-translate-y-1 hover:bg-primary/25"
+            >
+              <span className="text-lg font-semibold text-white">Add Staff</span>
+              <span className="text-xs text-white/60">Manage staff onboarding and approvals.</span>
+            </button>
+            <button
+              onClick={() => navigate('/owner/branches')}
+              className="flex flex-col gap-2 rounded-2xl border border-primary/20 bg-primary/15 p-4 text-left text-sm text-white/80 transition hover:-translate-y-1 hover:bg-primary/25"
+            >
+              <span className="text-lg font-semibold text-white">Add Branch</span>
+              <span className="text-xs text-white/60">Create new branches and assign staff.</span>
+            </button>
+            <button
+              onClick={() => navigate('/owner/hospitals')}
+              className="flex flex-col gap-2 rounded-2xl border border-primary/20 bg-primary/15 p-4 text-left text-sm text-white/80 transition hover:-translate-y-1 hover:bg-primary/25"
+            >
+              <span className="text-lg font-semibold text-white">Add Hospital</span>
+              <span className="text-xs text-white/60">Maintain your key client list.</span>
+            </button>
+          </FluentCard>
+
+          <div className="grid gap-6 lg:grid-cols-3">
+            <FluentCard glass className="lg:col-span-2">
+              <div className="mb-4 flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-white">Monthly Delivery Trends</h3>
+                <span className="text-xs uppercase text-white/40">Last 6 months</span>
+              </div>
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={monthTrends}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
+                    <XAxis dataKey="month" stroke="#94A3B8" />
+                    <YAxis stroke="#94A3B8" />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: '#0f1115',
+                        borderRadius: '1rem',
+                        border: '1px solid rgba(148,163,184,0.3)',
+                      }}
+                      labelStyle={{ color: '#fff' }}
+                    />
+                    <Line type="monotone" dataKey="value" stroke="#3B82F6" strokeWidth={3} dot={false} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </FluentCard>
+
+            <FluentCard glass>
+              <div className="mb-4 flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-white">Consignments by Status</h3>
+              </div>
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={statusDistribution}
+                      dataKey="value"
+                      nameKey="status"
+                      innerRadius={50}
+                      outerRadius={80}
+                      paddingAngle={4}
+                      fill="#8884d8"
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: '#0f1115',
+                        borderRadius: '1rem',
+                        border: '1px solid rgba(148,163,184,0.3)',
+                      }}
+                      labelStyle={{ color: '#fff' }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            </FluentCard>
+          </div>
+
+          <div className="grid gap-6 lg:grid-cols-2">
+            <FluentCard glass>
+              <div className="mb-4 flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-white">Top Hospitals by Value</h3>
+              </div>
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={topHospitals}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
+                    <XAxis dataKey="hospital" stroke="#94A3B8" />
+                    <YAxis stroke="#94A3B8" />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: '#0f1115',
+                        borderRadius: '1rem',
+                        border: '1px solid rgba(148,163,184,0.3)',
+                      }}
+                      labelStyle={{ color: '#fff' }}
+                    />
+                    <Bar dataKey="total" fill="#2563EB" radius={[10, 10, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </FluentCard>
+
+            <FluentCard glass>
+              <div className="mb-4 flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-white">Recent Consignments</h3>
+                <span className="text-xs text-white/40">Latest updates</span>
+              </div>
+              <div className="flex flex-col gap-3">
+                {recentConsignments.map((consignment) => (
+                  <RecentDCCard
+                    key={consignment.id}
+                    dcNumber={consignment.dc_number ?? `#${consignment.id.slice(-6)}`}
+                    createdAt={consignment.created_at}
+                    status={consignment.status ?? 'prepared'}
+                    value={consignment.total_value}
+                  />
+                ))}
+                {!recentConsignments.length && (
+                  <p className="text-center text-sm text-white/50">No consignments found yet.</p>
+                )}
+              </div>
+            </FluentCard>
+          </div>
+
+          <FluentCard glass className="flex flex-col gap-3 bg-gradient-to-br from-blue-500/20 via-blue-500/10 to-white/5">
+            <div className="flex items-center gap-3">
+              <div className="rounded-full bg-primary/20 p-3 text-primary">
+                <Package size={20} />
+              </div>
+              <h3 className="text-lg font-semibold text-white">Product Directory</h3>
+            </div>
+            <div className="space-y-2 text-sm text-white/70">
+              <div className="flex items-center justify-between">
+                <span>Total Products:</span>
+                <span className="text-lg font-semibold text-white">
+                  {overview.products.toLocaleString()}
                 </span>
               </div>
-            ))}
-            {!recentConsignments.length && (
-              <p className="text-center text-sm text-white/50">No consignments found yet.</p>
-            )}
+              <div className="flex items-center justify-between">
+                <span>In Stock:</span>
+                <span className="text-lg font-semibold text-white">
+                  {overview.productsInStock.toLocaleString()}
+                </span>
+              </div>
+            </div>
+            <button
+              onClick={() => navigate('/owner/products')}
+              className="rounded-full border border-white/20 px-4 py-2 text-sm text-white transition hover:bg-white/20"
+            >
+              Manage Products →
+            </button>
+          </FluentCard>
+        </div>
+
+        {loading && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+            <div className="h-16 w-16 animate-spin rounded-full border-4 border-primary-light border-t-primary"></div>
           </div>
-        </FluentCard>
+        )}
       </div>
-
-      <FluentCard glass className="flex flex-col gap-3 bg-gradient-to-br from-blue-500/20 via-blue-500/10 to-white/5">
-        <div className="flex items-center gap-3">
-          <div className="rounded-full bg-primary/20 p-3 text-primary">
-            <Package size={20} />
-          </div>
-          <h3 className="text-lg font-semibold text-white">Product Directory</h3>
-        </div>
-        <div className="space-y-2 text-sm text-white/70">
-          <div className="flex items-center justify-between">
-            <span>Total Products:</span>
-            <span className="text-lg font-semibold text-white">
-              {overview.products.toLocaleString()}
-            </span>
-          </div>
-          <div className="flex items-center justify-between">
-            <span>In Stock:</span>
-            <span className="text-lg font-semibold text-white">
-              {overview.productsInStock.toLocaleString()}
-            </span>
-          </div>
-        </div>
-        <button
-          onClick={() => navigate('/owner/products')}
-          className="rounded-full border border-white/20 px-4 py-2 text-sm text-white transition hover:bg-white/20"
-        >
-          Manage Products →
-        </button>
-      </FluentCard>
-
-      {loading && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-          <div className="h-16 w-16 animate-spin rounded-full border-4 border-primary-light border-t-primary"></div>
-        </div>
-      )}
-    </div>
+    </>
   )
 }
 
