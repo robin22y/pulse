@@ -9,8 +9,9 @@ const ChangePINPage = () => {
   const navigate = useNavigate()
   const location = useLocation()
   const initialMessage = location.state?.message ?? ''
-
-  const [currentPin, setCurrentPin] = useState('')
+  const initialPin = location.state?.initialPin ?? ''
+ 
+  const [currentPin, setCurrentPin] = useState(initialPin)
   const [newPin, setNewPin] = useState('')
   const [confirmPin, setConfirmPin] = useState('')
   const [error, setError] = useState(initialMessage ? '' : '')

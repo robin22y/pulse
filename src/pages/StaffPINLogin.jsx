@@ -33,14 +33,34 @@ const StaffPINLogin = () => {
           throw new Error('Invalid login link.')
         }
 
-        const { data: owner, error: ownerError } = await supabase
-          .from('users')
-          .select('id')
-          .eq('role', 'owner')
-          .eq('business_code', business.trim())
-          .maybeSingle()
+        const trimmedBusiness = business.trim()
+        const trimmedStaff = staff.trim()
+        const businessIsUuid = /^[0-9a-fA-F-]{32,36}$/.test(trimmedBusiness)
 
-        if (ownerError || !owner) {
+        let owner
+        if (businessIsUuid) {
+          const { data: ownerById, error: ownerIdError } = await supabase
+            .from('users')
+            .select('id')
+            .eq('role', 'owner')
+            .eq('id', trimmedBusiness)
+            .maybeSingle()
+          if (ownerIdError) throw ownerIdError
+          owner = ownerById
+        }
+
+        if (!owner) {
+          const { data: ownerByCode, error: ownerCodeError } = await supabase
+            .from('users')
+            .select('id')
+            .eq('role', 'owner')
+            .ilike('business_code', trimmedBusiness)
+            .maybeSingle()
+          if (ownerCodeError) throw ownerCodeError
+          owner = ownerByCode
+        }
+
+        if (!owner) {
           throw new Error('Business not found.')
         }
 
@@ -48,7 +68,7 @@ const StaffPINLogin = () => {
           .from('users')
           .select('id, full_name, staff_code')
           .eq('owner_id', owner.id)
-          .eq('staff_code', staff.trim())
+          .ilike('staff_code', trimmedStaff)
           .neq('role', 'owner')
           .maybeSingle()
 
@@ -130,7 +150,7 @@ const StaffPINLogin = () => {
       if (data?.must_change_pin) {
         navigate('/change-pin', {
           replace: true,
-          state: { message: 'You need to change your PIN before continuing.' },
+          state: { message: 'You need to change your PIN before continuing.', initialPin: pin },
         })
         return
       }
@@ -138,7 +158,7 @@ const StaffPINLogin = () => {
       if (data?.pin_expired) {
         navigate('/change-pin', {
           replace: true,
-          state: { message: 'Your PIN has expired. Please change it now.' },
+          state: { message: 'Your PIN has expired. Please change it now.', initialPin: pin },
         })
         return
       }
