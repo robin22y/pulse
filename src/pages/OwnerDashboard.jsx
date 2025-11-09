@@ -63,7 +63,6 @@ const OwnerDashboard = () => {
           { data: deliveryData, error: deliveryError },
           { data: staffData, error: staffError },
           { data: inventoryData, error: inventoryError },
-          { data: productStats, error: productError },
         ] = await Promise.all([
           supabase
             .from('consignments')
@@ -86,11 +85,28 @@ const OwnerDashboard = () => {
             .from('stock_items')
             .select('quantity_available, unit_price')
             .eq('owner_id', ownerId),
-          supabase.rpc('get_product_directory_stats', { p_owner_id: ownerId }),
         ])
 
         if (consignmentError || deliveryError || staffError || inventoryError) {
           throw consignmentError ?? deliveryError ?? staffError ?? inventoryError
+        }
+
+        let productTotals = { total_products: 0, products_in_stock: 0 }
+        try {
+          const { data: productStats, error: productError } = await supabase.rpc(
+            'get_product_directory_stats',
+            { p_owner_id: ownerId },
+          )
+          if (productError) {
+            console.warn('get_product_directory_stats unavailable', productError)
+          } else {
+            productTotals = {
+              total_products: productStats?.total_products ?? 0,
+              products_in_stock: productStats?.products_in_stock ?? 0,
+            }
+          }
+        } catch (rpcErr) {
+          console.warn('Unable to load product directory stats', rpcErr)
         }
 
         setConsignments(consignmentData ?? [])
@@ -104,8 +120,8 @@ const OwnerDashboard = () => {
             const price = Number(item.unit_price ?? 0)
             return total + price * Number(item.quantity_available ?? 0)
           }, 0) ?? 0,
-          products: productError ? 0 : productStats?.total_products ?? 0,
-          productsInStock: productError ? 0 : productStats?.products_in_stock ?? 0,
+          products: productTotals.total_products,
+          productsInStock: productTotals.products_in_stock,
         })
       } catch (err) {
         setError(err.message ?? 'Unable to load dashboard data.')

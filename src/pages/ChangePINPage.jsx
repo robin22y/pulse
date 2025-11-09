@@ -57,7 +57,7 @@ const ChangePINPage = () => {
   }
 
   const whatsappMessage = encodeURIComponent(
-    'Hi, I need help resetting my FieldFlow PIN. Please assist.',
+    'Hi, I need help resetting my Pulse PIN. Please assist.',
   )
 
   const whatsappUrl = `https://wa.me/?text=${whatsappMessage}`

@@ -184,7 +184,7 @@ const ReportsPage = () => {
   const exportPdf = () => {
     const doc = new jsPDF({ orientation: 'landscape' })
     doc.setFontSize(16)
-    doc.text('FieldFlow Delivery Report', 15, 20)
+    doc.text('Pulse Delivery Report', 15, 20)
     doc.setFontSize(12)
     doc.text(`Total Value: ₹${summary.totalValue.toLocaleString()}`, 15, 30)
     doc.text(`Delivered: ${summary.deliveredCount}`, 15, 36)

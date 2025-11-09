@@ -1,4 +1,5 @@
 import FluentCard from './FluentCard.jsx'
+import PulseLogo from './PulseLogo.jsx'
 
 const formatCurrency = (value) =>
   `₹${Number(value ?? 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}`
@@ -44,28 +45,26 @@ const DCPreview = ({ company = {}, hospital = {}, branch = {}, dcNumber, items =
 
   return (
     <div className="space-y-6">
-      <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-lg shadow-slate-900/5 md:p-6">
-        <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Delivery Challan</p>
-            <h1 className="mt-1 text-2xl font-bold text-slate-900 md:text-3xl">{dcNumber}</h1>
-            <p className="text-sm text-slate-500">Issued on {formatDate(createdAt)}</p>
+      <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-xl shadow-slate-900/10">
+        <div className="bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 p-6 md:p-8">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <PulseLogo size="default" variant="white" />
+            <div className="text-right text-white">
+              <h2 className="text-3xl font-bold uppercase tracking-[0.3em]">Delivery Challan</h2>
+              <div className="mt-3 inline-flex flex-col gap-1 rounded-xl bg-white/20 px-4 py-2 text-left shadow-lg">
+                <span className="text-xs uppercase tracking-[0.4em] text-blue-100">DC Number</span>
+                <span className="text-lg font-semibold">{dcNumber}</span>
+              </div>
+              <p className="mt-3 text-sm text-blue-100/80">Issued on {formatDate(createdAt)}</p>
+            </div>
           </div>
-          {company.company_logo_url ? (
-            <img
-              src={company.company_logo_url}
-              alt="Company Logo"
-              className="h-16 w-16 self-start rounded-2xl bg-slate-50 object-contain p-2 md:h-20 md:w-20"
-            />
-          ) : null}
         </div>
-
-        <div className="mt-6 grid gap-6 md:grid-cols-2">
+        <div className="grid gap-6 p-4 md:grid-cols-2 md:p-6">
           <div className="rounded-2xl bg-slate-50 p-4">
             <h2 className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">From</h2>
             <div className="mt-3 space-y-1.5 text-sm text-slate-600">
-              <p className="text-lg font-semibold text-slate-900">{company.company_name || 'Your Company Name'}</p>
-              <p>{company.company_address || 'Company address line'}</p>
+              <p className="text-lg font-semibold text-slate-900">{company.company_name || 'Add your company in settings'}</p>
+              <p>{company.company_address || 'Update your business address in settings'}</p>
               {companyCityLine ? <p>{companyCityLine}</p> : null}
               {company.company_gstin && <p className="text-sm text-slate-500">GSTIN: {company.company_gstin}</p>}
               {company.company_pan && <p className="text-sm text-slate-500">PAN: {company.company_pan}</p>}

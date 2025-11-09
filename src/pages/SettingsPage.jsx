@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react'
 import FluentCard from '../components/FluentCard.jsx'
 import { supabase } from '../utils/supabaseClient.js'
 import { useAuth } from '../contexts/AuthContext.jsx'
+import PulseLogo from '../components/PulseLogo.jsx'
+import PageHeader from '../components/layout/PageHeader.jsx'
 import LogoUpload from '../components/LogoUpload.jsx'
 
 const DC_DEFAULTS = {
@@ -248,13 +250,12 @@ const SettingsPage = () => {
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      <header className="flex flex-col gap-2">
-        <h1 className="text-2xl font-semibold text-white">Settings</h1>
-        <p className="text-sm text-white/60">
-          Configure company profile, delivery challan defaults, and inventory behaviour.
-        </p>
-      </header>
+    <>
+      <PageHeader
+        title="Company Settings"
+        description="Update your business profile, numbering preferences, and feature toggles."
+      />
+      <div className="flex flex-col gap-6">
 
       {error && (
         <div className="rounded-2xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-200">
@@ -608,7 +609,8 @@ const SettingsPage = () => {
           <div className="h-14 w-14 animate-spin rounded-full border-4 border-primary/30 border-t-primary"></div>
         </div>
       )}
-    </div>
+      </div>
+    </>
   )
 }
 

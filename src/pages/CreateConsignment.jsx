@@ -281,7 +281,7 @@ const CreateConsignment = () => {
   const generatePdf = (consignment, itemRows) => {
     const doc = new jsPDF()
     doc.setFontSize(18)
-    doc.text('FieldFlow Delivery Challan', 15, 20)
+    doc.text('Pulse Delivery Challan', 15, 20)
     doc.setFontSize(12)
     const company = companySettings || {}
     doc.text(`DC Number: ${consignment.dc_number}`, 15, 32)

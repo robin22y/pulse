@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../utils/supabaseClient.js'
-import { AlertCircle, ArrowLeft, Lock, ShieldCheck } from 'lucide-react'
+import { AlertCircle, ArrowLeft, ShieldCheck } from 'lucide-react'
+import PulseLogo from '../components/PulseLogo.jsx'
 
 const PIN_KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'clear', '0', 'back']
 
@@ -176,7 +177,9 @@ const StaffPINLogin = () => {
               Staff Access
             </span>
           </div>
-          <h1 className="text-2xl font-semibold text-white">FieldFlow Staff Login</h1>
+          <div className="flex justify-center">
+            <PulseLogo size="default" variant="white" />
+          </div>
           <p className="text-sm text-slate-300">
             Business code: {business ?? '—'} • Staff code: {staff ?? '—'}
           </p>

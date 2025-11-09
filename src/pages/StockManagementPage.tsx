@@ -3,6 +3,8 @@ import FluentCard from '../components/FluentCard.jsx'
 import { supabase } from '../utils/supabaseClient.js'
 import { Plus } from 'lucide-react'
 import AddStockModal from '../components/AddStockModal.jsx'
+import PageHeader from '../components/layout/PageHeader.jsx'
+import { useAuth } from '../contexts/AuthContext.jsx'
 
 interface StockItem {
   id: string
@@ -41,6 +43,7 @@ const getRowClassName = (item: StockItem) => {
 }
 
 const StockManagementPage = () => {
+  const { ownerId } = useAuth()
   const [stock, setStock] = useState<StockItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -48,12 +51,16 @@ const StockManagementPage = () => {
   const [showAddModal, setShowAddModal] = useState(false)
 
   const loadStock = async () => {
+    if (!ownerId) return
     setLoading(true)
     setError('')
     try {
       const { data, error: fetchError } = await supabase
         .from('stock_items')
-        .select('*')
+        .select(
+          `id, owner_id, item_name, brand_name, size, batch_number, manufacturing_date, expiry_date, quantity, quantity_available, unit_price, location, notes, created_at`,
+        )
+        .eq('owner_id', ownerId)
         .order('created_at', { ascending: false })
 
       if (fetchError) throw fetchError
@@ -66,8 +73,10 @@ const StockManagementPage = () => {
   }
 
   useEffect(() => {
-    loadStock()
-  }, [])
+    if (ownerId) {
+      loadStock()
+    }
+  }, [ownerId])
 
   useEffect(() => {
     if (!success) return
@@ -89,21 +98,20 @@ const StockManagementPage = () => {
   }, [stock])
 
   return (
-    <div className="flex flex-col gap-6">
-      <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold text-white">Stock Management</h1>
-          <p className="text-sm text-white/60">
-            Track stock batches, monitor expiries, and keep locations updated.
-          </p>
-        </div>
-        <button
-          onClick={() => setShowAddModal(true)}
-          className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-blue-600 to-purple-600 px-6 py-3 text-sm font-semibold text-white shadow-lg transition hover:shadow-xl"
-        >
-          <Plus size={20} /> Add Stock Entry
-        </button>
-      </header>
+    <>
+      <PageHeader
+        title="Stock Management"
+        description="Track batches, monitor expiry, and keep hospital stock levels healthy."
+        actions={
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="inline-flex items-center gap-2 rounded-full bg-white/20 px-4 py-2 text-xs font-semibold uppercase tracking-widest text-white transition hover:bg-white/30"
+          >
+            <Plus size={16} /> Add Stock Entry
+          </button>
+        }
+      />
+      <div className="flex flex-col gap-6">
 
       {error && (
         <div className="rounded-2xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-200">
@@ -183,7 +191,8 @@ const StockManagementPage = () => {
           loadStock()
         }}
       />
-    </div>
+      </div>
+    </>
   )
 }
 

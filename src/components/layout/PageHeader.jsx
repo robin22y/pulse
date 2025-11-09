@@ -26,40 +26,41 @@ const PageHeader = ({ title, description, actions }) => {
   }, [logout, navigate])
 
   return (
-    <div className="sticky top-0 z-50 border-b border-slate-800/60 bg-slate-950/90 backdrop-blur">
-      <div className="mx-auto flex w-full max-w-7xl flex-col gap-3 px-4 py-3 sm:px-6">
+    <div className="sticky top-0 z-50 border-b border-white/10 bg-[#050915] text-white shadow-lg">
+      <div className="mx-auto w-full max-w-7xl px-4 py-4 sm:px-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <button
-            type="button"
-            onClick={goToDashboard}
-            className="group inline-flex items-center gap-3 rounded-xl px-2 py-1 transition hover:bg-white/5 active:scale-95"
-          >
-            <PulseLogo size="small" variant="white" />
-            <span className="hidden text-xs font-semibold uppercase tracking-widest text-slate-300 group-hover:text-white sm:inline">
-              Go to Dashboard
-            </span>
-          </button>
+          <div className="flex items-center gap-4">
+            <PulseLogo size="default" variant="white" />
+            <button
+              type="button"
+              onClick={goToDashboard}
+              className="group relative inline-flex items-center overflow-hidden rounded-full border border-white/30 px-6 py-2 text-xs font-semibold uppercase tracking-[0.5em] text-white/70 transition hover:text-white"
+            >
+              <span className="absolute inset-0 bg-gradient-to-r from-blue-500/20 via-purple-500/30 to-pink-500/20 opacity-0 transition group-hover:opacity-100" />
+              <span className="relative">Go to Dashboard</span>
+            </button>
+          </div>
           <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={goToDashboard}
-              className="inline-flex items-center rounded-full border border-white/15 px-3 py-2 text-xs font-semibold uppercase tracking-widest text-white/80 transition hover:bg-white/10 hover:text-white active:scale-95"
+              className="rounded-full border border-white/30 px-5 py-2 text-xs font-semibold uppercase tracking-widest text-white transition hover:bg-white/10 active:scale-95"
             >
               Dashboard
             </button>
             <button
               type="button"
               onClick={handleSignOut}
-              className="inline-flex items-center rounded-full bg-red-500 px-4 py-2 text-xs font-semibold uppercase tracking-widest text-white transition hover:bg-red-600 active:scale-95"
+              className="rounded-full bg-gradient-to-r from-rose-500 to-rose-600 px-5 py-2 text-xs font-semibold uppercase tracking-widest text-white shadow-lg shadow-rose-500/30 transition hover:shadow-rose-500/50 active:scale-95"
             >
               Sign Out
             </button>
           </div>
         </div>
         {(title || description || actions) && (
-          <div className="flex flex-col gap-2 text-white">
-            {title ? <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">{title}</h1> : null}
-            {description ? <p className="text-sm text-white/70">{description}</p> : null}
+          <div className="mt-6 flex flex-col gap-3">
+            {title ? <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">{title}</h1> : null}
+            {description ? <p className="text-sm text-white/70 md:max-w-3xl">{description}</p> : null}
             {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
           </div>
         )}

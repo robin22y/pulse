@@ -4,6 +4,7 @@ import LoginForm from '../components/Auth/LoginForm.jsx'
 import SignupForm from '../components/Auth/SignupForm.jsx'
 import { useAuth } from '../contexts/AuthContext.jsx'
 import { resolveLandingRoute } from '../utils/navigation.js'
+import PulseLogo from '../components/PulseLogo.jsx'
 
 const LoginPage = () => {
   const [activeTab, setActiveTab] = useState('login')
@@ -22,9 +23,9 @@ const LoginPage = () => {
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-[#f4faff] via-white to-[#e6f2ff] p-4">
       <div className="w-full max-w-md">
         <div className="mb-8 text-center animate-fade-in">
-          <h1 className="mb-2 text-5xl font-light text-gray-800">FieldFlow</h1>
-          <p className="mx-auto max-w-sm leading-relaxed text-gray-600">
-            Seamless consignment tracking inspired by clean Windows Phone aesthetics
+          <PulseLogo size="large" variant="default" />
+          <p className="mx-auto mt-4 max-w-md leading-relaxed text-gray-600">
+            Real-time consignment tracking that keeps your operations in perfect rhythm
           </p>
         </div>
 

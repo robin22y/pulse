@@ -50,6 +50,11 @@ const ShellLayout = ({ mobileOnly = false, children }) => {
           {children || <Outlet />}
         </div>
       </main>
+      <div className="border-t border-white/10 bg-slate-950/80 py-4 text-center text-xs text-gray-400 md:pb-24">
+        Powered by
+        <span className="mx-1 font-bold text-gradient-blue-purple">Pulse by DigiGet</span>
+        • pulse.digiget.org
+      </div>
       {!mobileOnly && (
         <div className="hidden md:block">
           <BottomNavigation items={navItems} activePath={location.pathname} />

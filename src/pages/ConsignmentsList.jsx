@@ -6,6 +6,7 @@ import { useAuth } from '../contexts/AuthContext.jsx'
 import StatusBadge from '../components/StatusBadge.jsx'
 import ConsignmentActions from '../components/consignments/ConsignmentActions.jsx'
 import { FileText, AlertCircle, DollarSign, TrendingUp, Plus } from 'lucide-react'
+import PageHeader from '../components/layout/PageHeader.jsx'
 
 const formatCurrency = (value) => `₹${Number(value ?? 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}`
 const formatDate = (value) => (value ? new Date(value).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—')
@@ -179,29 +180,28 @@ const ConsignmentsList = () => {
   ]
 
   return (
-    <div className="flex flex-col gap-6">
-      <header className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold text-white">All Delivery Challans</h1>
-          <p className="text-sm text-white/60">
-            Monitor every delivery challan, track billing, and record payments in one view.
-          </p>
-        </div>
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          <input
-            value={searchTerm}
-            onChange={(event) => setSearchTerm(event.target.value)}
-            placeholder="Search DC number or hospital"
-            className="rounded-2xl border border-white/10 bg-slate-900/70 px-4 py-2 text-sm text-white focus:border-primary focus:ring-2 focus:ring-primary/40"
-          />
-          <button
-            className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2 text-sm font-semibold text-white transition hover:bg-primary-dark"
-            onClick={() => navigate('/consignments/create')}
-          >
-            <Plus size={16} /> Create New DC
-          </button>
-        </div>
-      </header>
+    <>
+      <PageHeader
+        title="Delivery Challans"
+        description="Track every DC with delivery, billing, and payment status in real time."
+        actions={
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <input
+              value={searchTerm}
+              onChange={(event) => setSearchTerm(event.target.value)}
+              placeholder="Search DC number or hospital"
+              className="rounded-2xl border border-white/10 bg-white/10 px-4 py-2 text-sm text-white placeholder:text-white/70 focus:border-white focus:outline-none focus:ring-2 focus:ring-white/40"
+            />
+            <button
+              className="inline-flex items-center gap-2 rounded-full bg-white/20 px-4 py-2 text-xs font-semibold uppercase tracking-widest text-white transition hover:bg-white/30"
+              onClick={() => navigate('/consignments/create')}
+            >
+              <Plus size={16} /> New DC
+            </button>
+          </div>
+        }
+      />
+      <div className="flex flex-col gap-6">
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <SummaryCard title="Total DCs" value={stats.total} icon={FileText} />
@@ -387,6 +387,7 @@ const ConsignmentsList = () => {
         )}
       </FluentCard>
     </div>
+    </>
   )
 }
 

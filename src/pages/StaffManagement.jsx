@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import FluentCard from '../components/FluentCard.jsx'
-import { useAuth } from '../contexts/AuthContext.jsx'
 import { supabase } from '../utils/supabaseClient.js'
-import { Copy, Share2, Edit, Ban, Check } from 'lucide-react'
+import { useAuth } from '../contexts/AuthContext.jsx'
+import { Plus, Users, Filter, Search, ShieldCheck, Copy, Share2, Lock, CheckCircle2, AlertCircle, Pencil, Ban, Check } from 'lucide-react'
+import PageHeader from '../components/layout/PageHeader.jsx'
 
 const roleOptions = [
   { label: 'Owner', value: 'owner' },
@@ -276,24 +277,23 @@ const StaffManagement = () => {
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      <header className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h2 className="text-2xl font-semibold text-white">Staff Management</h2>
-          <p className="text-sm text-white/60">
-            Manage staff, assign managers, and control approval workflows.
-          </p>
-        </div>
-        <button
-          onClick={() => {
-            resetForm()
-            setModalOpen(true)
-          }}
-          className="rounded-full bg-primary px-5 py-3 text-sm font-semibold text-white transition hover:bg-primary-dark"
-        >
-          Add Staff Member
-        </button>
-      </header>
+    <>
+      <PageHeader
+        title="Staff Management"
+        description="Manage roles, PINs, and approvals for your field teams."
+        actions={
+          <button
+            onClick={() => {
+              resetForm()
+              setModalOpen(true)
+            }}
+            className="inline-flex items-center gap-2 rounded-full bg-white/20 px-4 py-2 text-xs font-semibold uppercase tracking-widest text-white transition hover:bg-white/30"
+          >
+            <Plus size={16} /> Add Staff
+          </button>
+        }
+      />
+      <div className="flex flex-col gap-6">
 
       {error && (
         <div className="rounded-2xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-200">
@@ -380,7 +380,7 @@ const StaffManagement = () => {
                     }
                     className="inline-flex items-center gap-1 rounded-full border border-white/20 px-3 py-1 text-xs font-semibold text-white/70 transition hover:bg-white/10"
                   >
-                    <Edit size={14} /> Edit
+                    <Pencil size={14} /> Edit
                   </button>
                   <button
                     onClick={() => handleResetPin(member)}
@@ -681,7 +681,7 @@ const StaffManagement = () => {
                 </button>
                 <a
                   href={`https://wa.me/?text=${encodeURIComponent(
-                    `Your FieldFlow login\n${shareModal.pin ? `PIN: ${shareModal.pin}\n` : ''}${shareModal.link}\nChange your PIN after first login.`,
+                    `Your Pulse login\n${shareModal.pin ? `PIN: ${shareModal.pin}\n` : ''}${shareModal.link}\nChange your PIN after first login.`,
                   )}`}
                   target="_blank"
                   rel="noreferrer"
@@ -701,6 +701,7 @@ const StaffManagement = () => {
         </div>
       )}
     </div>
+    </>
   )
 }
 
