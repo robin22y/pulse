@@ -16,6 +16,7 @@ import {
 import FluentCard from '../components/FluentCard.jsx'
 import { useAuth } from '../contexts/AuthContext.jsx'
 import { supabase } from '../utils/supabaseClient.js'
+import { Package, PackagePlus } from 'lucide-react'
 
 const StatCard = ({ label, value, accent }) => (
   <FluentCard
@@ -47,6 +48,14 @@ const OwnerDashboard = () => {
   const [inventory, setInventory] = useState([])
   const [users, setUsers] = useState([])
   const [error, setError] = useState('')
+  const [overview, setOverview] = useState({
+    consignments: 0,
+    deliveries: 0,
+    staff: 0,
+    inventoryValue: 0,
+    products: 0,
+    productsInStock: 0,
+  })
 
   useEffect(() => {
     const load = async () => {
@@ -54,33 +63,55 @@ const OwnerDashboard = () => {
       setLoading(true)
       setError('')
       try {
-        const [{ data: consignmentData, error: consignmentError }, { data: inventoryData, error: inventoryError }, { data: usersData, error: usersError }] =
-          await Promise.all([
-            supabase
-              .from('consignments')
-              .select(
-                'id, hospital_id, status, total_value, dc_number, dispatched_at, delivered_at, created_at',
-              )
-              .eq('owner_id', ownerId)
-              .order('created_at', { ascending: false })
-              .limit(120),
-            supabase
-              .from('inventory')
-              .select('id, quantity, product:products(id, brand_name, price)')
-              .eq('owner_id', ownerId),
-            supabase
-              .from('users')
-              .select('id, full_name, role, owner_id, manager_id')
-              .eq('owner_id', ownerId),
-          ])
+        const [
+          { data: consignmentData, error: consignmentError },
+          { data: deliveryData, error: deliveryError },
+          { data: staffData, error: staffError },
+          { data: inventoryData, error: inventoryError },
+          { data: productStats, error: productError },
+        ] = await Promise.all([
+          supabase
+            .from('consignments')
+            .select(
+              'id, hospital_id, status, total_value, dc_number, dispatched_at, delivered_at, created_at',
+            )
+            .eq('owner_id', ownerId)
+            .order('created_at', { ascending: false })
+            .limit(120),
+          supabase
+            .from('inventory')
+            .select('id, quantity, product:products(id, brand_name, price)')
+            .eq('owner_id', ownerId),
+          supabase
+            .from('users')
+            .select('id, full_name, role, owner_id, manager_id')
+            .eq('owner_id', ownerId),
+          supabase
+            .from('stock_items')
+            .select('quantity_available, unit_price')
+            .eq('owner_id', ownerId),
+          supabase
+            .rpc('get_product_directory_stats', { p_owner_id: ownerId }),
+        ])
 
-        if (consignmentError || inventoryError || usersError) {
-          throw consignmentError || inventoryError || usersError
+        if (consignmentError || deliveryError || staffError || inventoryError) {
+          throw consignmentError ?? deliveryError ?? staffError ?? inventoryError
         }
 
         setConsignments(consignmentData ?? [])
         setInventory(inventoryData ?? [])
         setUsers(usersData ?? [])
+        setOverview({
+          consignments: consignmentData?.length ?? 0,
+          deliveries: deliveryData?.length ?? 0,
+          staff: staffData?.length ?? 0,
+          inventoryValue: inventoryData.reduce((total, item) => {
+            const price = Number(item.product?.price ?? 0)
+            return total + price * Number(item.quantity ?? 0)
+          }, 0),
+          products: productError ? 0 : productStats?.total_products ?? 0,
+          productsInStock: productError ? 0 : productStats?.products_in_stock ?? 0,
+        })
       } catch (err) {
         setError(err.message ?? 'Unable to load dashboard data.')
       } finally {
@@ -310,6 +341,35 @@ const OwnerDashboard = () => {
           </div>
         </FluentCard>
       </div>
+
+      <FluentCard glass className="flex flex-col gap-3 bg-gradient-to-br from-blue-500/20 via-blue-500/10 to-white/5">
+        <div className="flex items-center gap-3">
+          <div className="rounded-full bg-primary/20 p-3 text-primary">
+            <Package size={20} />
+          </div>
+          <h3 className="text-lg font-semibold text-white">Product Directory</h3>
+        </div>
+        <div className="space-y-2 text-sm text-white/70">
+          <div className="flex items-center justify-between">
+            <span>Total Products:</span>
+            <span className="text-lg font-semibold text-white">
+              {overview.products.toLocaleString()}
+            </span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span>In Stock:</span>
+            <span className="text-lg font-semibold text-white">
+              {overview.productsInStock.toLocaleString()}
+            </span>
+          </div>
+        </div>
+        <button
+          onClick={() => navigate('/owner/products')}
+          className="rounded-full border border-white/20 px-4 py-2 text-sm text-white transition hover:bg-white/20"
+        >
+          Manage Products →
+        </button>
+      </FluentCard>
 
       {loading && (
         <div className="fixed inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm">

@@ -4,6 +4,11 @@ import { useAuth } from '../contexts/AuthContext.jsx'
 import { supabase } from '../utils/supabaseClient.js'
 import { Edit } from 'lucide-react'
 
+const GSTIN_REGEX = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/
+const PHONE_REGEX = /^[+]?[0-9]{10,15}$/
+const PINCODE_REGEX = /^[0-9]{6}$/
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
 const HospitalManagement = () => {
   const { ownerId } = useAuth()
   const [hospitals, setHospitals] = useState([])
@@ -11,11 +16,15 @@ const HospitalManagement = () => {
   const [filters, setFilters] = useState({ query: '', city: '', state: '' })
   const [formState, setFormState] = useState({
     name: '',
+    contact_person: '',
+    phone: '',
+    email: '',
     address: '',
     city: '',
     state: '',
-    contact_person: '',
-    phone: '',
+    pincode: '',
+    gstin: '',
+    drug_license: '',
     branchName: '',
   })
   const [loading, setLoading] = useState(true)
@@ -36,7 +45,9 @@ const HospitalManagement = () => {
       ] = await Promise.all([
         supabase
           .from('hospitals')
-          .select('id, name, address, city, state, contact_person, phone, owner_id, branch_id')
+          .select(
+            'id, name, address, city, state, contact_person, phone, email, pincode, gstin, drug_license_number, owner_id, branch_id',
+          )
           .eq('owner_id', ownerId)
           .order('created_at', { ascending: false }),
         supabase
@@ -109,6 +120,15 @@ const HospitalManagement = () => {
     setError('')
     setSuccessMessage('')
     try {
+      if (!formState.name.trim()) throw new Error('Hospital name is required.')
+      if (!formState.contact_person.trim()) throw new Error('Contact person is required.')
+      if (!PHONE_REGEX.test(formState.phone.trim())) throw new Error('Enter a valid phone number (10-15 digits).')
+      if (formState.email && !EMAIL_REGEX.test(formState.email.trim())) throw new Error('Enter a valid email address.')
+      if (!formState.address.trim()) throw new Error('Address is required.')
+      if (!formState.city.trim() || !formState.state.trim()) throw new Error('City and state are required.')
+      if (!PINCODE_REGEX.test(formState.pincode.trim())) throw new Error('Pincode must be 6 digits.')
+      if (formState.gstin && !GSTIN_REGEX.test(formState.gstin.trim().toUpperCase())) throw new Error('GSTIN format is invalid.')
+
       const {
         data: { user },
         error: userError,
@@ -150,21 +170,29 @@ const HospitalManagement = () => {
       const { error: insertError } = await supabase.from('hospitals').insert({
         owner_id: user.id,
         branch_id: branchId,
-        name: formState.name,
-        address: formState.address,
-        city: formState.city,
-        state: formState.state,
-        contact_person: formState.contact_person,
-        phone: formState.phone,
+        name: formState.name.trim(),
+        address: formState.address.trim(),
+        city: formState.city.trim(),
+        state: formState.state.trim(),
+        contact_person: formState.contact_person.trim(),
+        phone: formState.phone.trim(),
+        email: formState.email ? formState.email.trim() : null,
+        pincode: formState.pincode.trim(),
+        gstin: formState.gstin ? formState.gstin.trim().toUpperCase() : null,
+        drug_license_number: formState.drug_license ? formState.drug_license.trim() : null,
       })
       if (insertError) throw insertError
       setFormState({
         name: '',
+        contact_person: '',
+        phone: '',
+        email: '',
         address: '',
         city: '',
         state: '',
-        contact_person: '',
-        phone: '',
+        pincode: '',
+        gstin: '',
+        drug_license: '',
         branchName: '',
       })
       await loadData()
@@ -183,6 +211,22 @@ const HospitalManagement = () => {
       setError('Name, address, and city are required.')
       return
     }
+    if (!PINCODE_REGEX.test((editModal.pincode ?? '').trim())) {
+      setError('Pincode must be 6 digits.')
+      return
+    }
+    if (editModal.phone && !PHONE_REGEX.test(editModal.phone.trim())) {
+      setError('Enter a valid phone number.')
+      return
+    }
+    if (editModal.email && !EMAIL_REGEX.test(editModal.email.trim())) {
+      setError('Enter a valid email address.')
+      return
+    }
+    if (editModal.gstin && !GSTIN_REGEX.test(editModal.gstin.trim().toUpperCase())) {
+      setError('GSTIN format is invalid.')
+      return
+    }
     setSaving(true)
     setError('')
     setSuccessMessage('')
@@ -190,12 +234,16 @@ const HospitalManagement = () => {
       const { error: updateError } = await supabase
         .from('hospitals')
         .update({
-          name: editModal.name,
-          address: editModal.address,
-          city: editModal.city,
-          state: editModal.state,
-          contact_person: editModal.contact_person,
-          phone: editModal.phone,
+          name: editModal.name.trim(),
+          address: editModal.address.trim(),
+          city: editModal.city.trim(),
+          state: editModal.state.trim(),
+          contact_person: editModal.contact_person.trim(),
+          phone: editModal.phone ? editModal.phone.trim() : null,
+          email: editModal.email ? editModal.email.trim() : null,
+          pincode: editModal.pincode.trim(),
+          gstin: editModal.gstin ? editModal.gstin.trim().toUpperCase() : null,
+          drug_license_number: editModal.drug_license ? editModal.drug_license.trim() : null,
         })
         .eq('id', editModal.id)
 
@@ -206,12 +254,16 @@ const HospitalManagement = () => {
           hospital.id === editModal.id
             ? {
                 ...hospital,
-                name: editModal.name,
-                address: editModal.address,
-                city: editModal.city,
-                state: editModal.state,
-                contact_person: editModal.contact_person,
-                phone: editModal.phone,
+                name: editModal.name.trim(),
+                address: editModal.address.trim(),
+                city: editModal.city.trim(),
+                state: editModal.state.trim(),
+                contact_person: editModal.contact_person.trim(),
+                phone: editModal.phone ? editModal.phone.trim() : null,
+                email: editModal.email ? editModal.email.trim() : null,
+                pincode: editModal.pincode.trim(),
+                gstin: editModal.gstin ? editModal.gstin.trim().toUpperCase() : null,
+                drug_license_number: editModal.drug_license ? editModal.drug_license.trim() : null,
               }
             : hospital,
         ),
@@ -310,11 +362,20 @@ const HospitalManagement = () => {
                   <div>
                     <h4 className="text-lg font-semibold text-white">{hospital.name}</h4>
                     <p className="text-sm text-white/60">
-                      {hospital.city}, {hospital.state}
+                      {hospital.city}, {hospital.state} • {hospital.pincode || '—'}
                     </p>
                     <p className="text-xs text-white/50">
                       Contact: {hospital.contact_person ?? '—'} • {hospital.phone ?? '—'}
                     </p>
+                    {hospital.email && (
+                      <p className="text-xs text-white/50">Email: {hospital.email}</p>
+                    )}
+                    {(hospital.gstin || hospital.drug_license_number) && (
+                      <div className="mt-1 text-[11px] text-white/40">
+                        {hospital.gstin && <p>GSTIN: {hospital.gstin}</p>}
+                        {hospital.drug_license_number && <p>Drug Lic: {hospital.drug_license_number}</p>}
+                      </div>
+                    )}
                   </div>
                   <div className="flex items-center gap-3">
                     <div className="text-right">
@@ -335,6 +396,10 @@ const HospitalManagement = () => {
                           state: hospital.state ?? '',
                           contact_person: hospital.contact_person ?? '',
                           phone: hospital.phone ?? '',
+                          email: hospital.email ?? '',
+                          pincode: hospital.pincode ?? '',
+                          gstin: hospital.gstin ?? '',
+                          drug_license: hospital.drug_license_number ?? '',
                         })
                       }
                       className="inline-flex items-center gap-2 rounded-full border border-white/20 px-4 py-2 text-xs font-semibold text-white/80 transition hover:bg-white/10"
@@ -366,77 +431,166 @@ const HospitalManagement = () => {
         <div className="flex flex-col gap-6">
           <FluentCard glass>
             <h3 className="mb-4 text-lg font-semibold text-white">Add Hospital</h3>
-            <form onSubmit={handleSubmit} className="space-y-3">
-              <input
-                required
-                placeholder="Hospital Name"
-                value={formState.name}
-                onChange={(event) =>
-                  setFormState((prev) => ({ ...prev, name: event.target.value }))
-                }
-                className="rounded-2xl border border-white/10 bg-slate-900/70 px-4 py-3 text-sm text-white focus:border-primary focus:ring-2 focus:ring-primary/40"
-              />
-              <div>
-                <input
-                  placeholder="Assign Branch (optional)"
-                  value={formState.branchName}
-                  onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, branchName: event.target.value }))
-                  }
-                  className="rounded-2xl border border-white/10 bg-slate-900/70 px-4 py-3 text-sm text-white focus:border-primary focus:ring-2 focus:ring-primary/40"
-                />
-                <p className="mt-1 text-xs text-white/50">
-                  If the branch doesn’t exist, it will be created automatically.
-                </p>
-              </div>
-              <input
-                placeholder="Address"
-                value={formState.address}
-                onChange={(event) =>
-                  setFormState((prev) => ({ ...prev, address: event.target.value }))
-                }
-                className="rounded-2xl border border-white/10 bg-slate-900/70 px-4 py-3 text-sm text-white focus:border-primary focus:ring-2 focus:ring-primary/40"
-              />
-              <div className="grid gap-3 sm:grid-cols-2">
-                <input
-                  placeholder="City"
-                  value={formState.city}
-                  onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, city: event.target.value }))
-                  }
-                  className="rounded-2xl border border-white/10 bg-slate-900/70 px-4 py-3 text-sm text-white focus:border-primary focus:ring-2 focus:ring-primary/40"
-                />
-                <input
-                  placeholder="State"
-                  value={formState.state}
-                  onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, state: event.target.value }))
-                  }
-                  className="rounded-2xl border border-white/10 bg-slate-900/70 px-4 py-3 text-sm text-white focus:border-primary focus:ring-2 focus:ring-primary/40"
-                />
-              </div>
-              <input
-                placeholder="Contact Person"
-                value={formState.contact_person}
-                onChange={(event) =>
-                    setFormState((prev) => ({ ...prev, contact_person: event.target.value }))
-                  }
-                className="rounded-2xl border border-white/10 bg-slate-900/70 px-4 py-3 text-sm text-white focus:border-primary focus:ring-2 focus:ring-primary/40"
-              />
-              <input
-                placeholder="Phone"
-                value={formState.phone}
-                onChange={(event) =>
-                  setFormState((prev) => ({ ...prev, phone: event.target.value }))
-                }
-                className="rounded-2xl border border-white/10 bg-slate-900/70 px-4 py-3 text-sm text-white focus:border-primary focus:ring-2 focus:ring-primary/40"
-              />
+            <form onSubmit={handleSubmit} className="space-y-5">
+              <section className="space-y-3">
+                <h4 className="text-sm font-semibold uppercase tracking-wide text-white/60">
+                  Basic Details
+                </h4>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <label className="flex flex-col gap-2 text-sm">
+                    <span className="text-white/70">Hospital Name *</span>
+                    <input
+                      value={formState.name}
+                      onChange={(event) =>
+                        setFormState((prev) => ({ ...prev, name: event.target.value }))
+                      }
+                      required
+                      className="rounded-2xl border border-white/10 bg-slate-900/70 px-4 py-3 text-sm text-white focus:border-primary focus:ring-2 focus:ring-primary/40"
+                      placeholder="Sunrise Medical Center"
+                    />
+                  </label>
+                  <label className="flex flex-col gap-2 text-sm">
+                    <span className="text-white/70">Contact Person *</span>
+                    <input
+                      value={formState.contact_person}
+                      onChange={(event) =>
+                        setFormState((prev) => ({ ...prev, contact_person: event.target.value }))
+                      }
+                      required
+                      className="rounded-2xl border border-white/10 bg-slate-900/70 px-4 py-3 text-sm text-white focus:border-primary focus:ring-2 focus:ring-primary/40"
+                      placeholder="Dr. Anita Rao"
+                    />
+                  </label>
+                  <label className="flex flex-col gap-2 text-sm">
+                    <span className="text-white/70">Contact Phone *</span>
+                    <input
+                      value={formState.phone}
+                      onChange={(event) =>
+                        setFormState((prev) => ({ ...prev, phone: event.target.value }))
+                      }
+                      required
+                      className="rounded-2xl border border-white/10 bg-slate-900/70 px-4 py-3 text-sm text-white focus:border-primary focus:ring-2 focus:ring-primary/40"
+                      placeholder="+919876543210"
+                    />
+                  </label>
+                  <label className="flex flex-col gap-2 text-sm">
+                    <span className="text-white/70">Email Address</span>
+                    <input
+                      value={formState.email}
+                      onChange={(event) =>
+                        setFormState((prev) => ({ ...prev, email: event.target.value }))
+                      }
+                      className="rounded-2xl border border-white/10 bg-slate-900/70 px-4 py-3 text-sm text-white focus:border-primary focus:ring-2 focus:ring-primary/40"
+                      placeholder="admin@hospital.com"
+                    />
+                  </label>
+                </div>
+              </section>
+
+              <section className="space-y-3">
+                <h4 className="text-sm font-semibold uppercase tracking-wide text-white/60">
+                  Address
+                </h4>
+                <label className="flex flex-col gap-2 text-sm">
+                  <span className="text-white/70">Address *</span>
+                  <textarea
+                    value={formState.address}
+                    onChange={(event) =>
+                      setFormState((prev) => ({ ...prev, address: event.target.value }))
+                    }
+                    required
+                    rows={3}
+                    className="rounded-2xl border border-white/10 bg-slate-900/70 px-4 py-3 text-sm text-white focus:border-primary focus:ring-2 focus:ring-primary/40"
+                    placeholder="123 MG Road, Sector 5"
+                  />
+                </label>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <label className="flex flex-col gap-2 text-sm">
+                    <span className="text-white/70">City *</span>
+                    <input
+                      value={formState.city}
+                      onChange={(event) =>
+                        setFormState((prev) => ({ ...prev, city: event.target.value }))
+                      }
+                      required
+                      className="rounded-2xl border border-white/10 bg-slate-900/70 px-4 py-3 text-sm text-white focus:border-primary focus:ring-2 focus:ring-primary/40"
+                    />
+                  </label>
+                  <label className="flex flex-col gap-2 text-sm">
+                    <span className="text-white/70">State *</span>
+                    <input
+                      value={formState.state}
+                      onChange={(event) =>
+                        setFormState((prev) => ({ ...prev, state: event.target.value }))
+                      }
+                      required
+                      className="rounded-2xl border border-white/10 bg-slate-900/70 px-4 py-3 text-sm text-white focus:border-primary focus:ring-2 focus:ring-primary/40"
+                    />
+                  </label>
+                  <label className="flex flex-col gap-2 text-sm">
+                    <span className="text-white/70">Pincode *</span>
+                    <input
+                      value={formState.pincode}
+                      onChange={(event) =>
+                        setFormState((prev) => ({ ...prev, pincode: event.target.value }))
+                      }
+                      required
+                      className="rounded-2xl border border-white/10 bg-slate-900/70 px-4 py-3 text-sm text-white focus:border-primary focus:ring-2 focus:ring-primary/40"
+                    />
+                  </label>
+                  <label className="flex flex-col gap-2 text-sm">
+                    <span className="text-white/70">Assign Branch (optional)</span>
+                    <input
+                      value={formState.branchName}
+                      onChange={(event) =>
+                        setFormState((prev) => ({ ...prev, branchName: event.target.value }))
+                      }
+                      className="rounded-2xl border border-white/10 bg-slate-900/70 px-4 py-3 text-sm text-white focus:border-primary focus:ring-2 focus:ring-primary/40"
+                      placeholder="Central Zone"
+                    />
+                    <span className="text-xs text-white/40">
+                      Branch will be created if it does not exist.
+                    </span>
+                  </label>
+                </div>
+              </section>
+
+              <details className="rounded-2xl border border-white/10 bg-slate-900/60 p-4 text-sm text-white/70">
+                <summary className="cursor-pointer font-semibold text-white">Legal Details</summary>
+                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                  <label className="flex flex-col gap-2 text-sm">
+                    <span className="text-white/70">GSTIN (optional)</span>
+                    <input
+                      value={formState.gstin}
+                      onChange={(event) =>
+                        setFormState((prev) => ({ ...prev, gstin: event.target.value.toUpperCase() }))
+                      }
+                      className="rounded-2xl border border-white/10 bg-slate-900/70 px-4 py-3 text-sm text-white focus:border-primary focus:ring-2 focus:ring-primary/40"
+                      placeholder="22AAAAA0000A1Z5"
+                    />
+                    <span className="text-xs text-white/40">Hospital's GST registration number</span>
+                  </label>
+                  <label className="flex flex-col gap-2 text-sm">
+                    <span className="text-white/70">Drug License Number (optional)</span>
+                    <input
+                      value={formState.drug_license}
+                      onChange={(event) =>
+                        setFormState((prev) => ({ ...prev, drug_license: event.target.value }))
+                      }
+                      className="rounded-2xl border border-white/10 bg-slate-900/70 px-4 py-3 text-sm text-white focus:border-primary focus:ring-2 focus:ring-primary/40"
+                      placeholder="DL-XXXX-XXXX"
+                    />
+                    <span className="text-xs text-white/40">Hospital's drug license</span>
+                  </label>
+                </div>
+              </details>
+
               <button
                 type="submit"
                 disabled={saving}
-                className="rounded-2xl border border-white/20 bg-white/10 px-4 py-3 text-sm font-semibold text-white transition hover:bg-white/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="rounded-full bg-primary px-5 py-3 text-sm font-semibold text-white transition hover:bg-primary-dark disabled:cursor-wait"
               >
-                {saving ? 'Adding...' : 'Add Hospital'}
+                {saving ? 'Saving…' : 'Add Hospital'}
               </button>
             </form>
           </FluentCard>
@@ -444,72 +598,139 @@ const HospitalManagement = () => {
           {editModal && (
             <FluentCard glass>
               <h3 className="mb-4 text-lg font-semibold text-white">Edit Hospital</h3>
-              <form onSubmit={handleUpdateHospital} className="space-y-3">
-                <input
-                  required
-                  placeholder="Hospital Name"
-                  value={editModal.name}
-                  onChange={(event) =>
-                    setEditModal((prev) => ({ ...prev, name: event.target.value }))
-                  }
-                  className="rounded-2xl border border-white/10 bg-slate-900/70 px-4 py-3 text-sm text-white focus:border-primary focus:ring-2 focus:ring-primary/40"
-                />
-                <input
-                  placeholder="Address"
-                  value={editModal.address}
-                  onChange={(event) =>
-                    setEditModal((prev) => ({ ...prev, address: event.target.value }))
-                  }
-                  className="rounded-2xl border border-white/10 bg-slate-900/70 px-4 py-3 text-sm text-white focus:border-primary focus:ring-2 focus:ring-primary/40"
-                />
+              <form onSubmit={handleUpdateHospital} className="flex flex-col gap-4">
+                <label className="flex flex-col gap-2 text-sm">
+                  <span className="text-white/70">Hospital Name *</span>
+                  <input
+                    value={editModal.name}
+                    onChange={(event) =>
+                      setEditModal((prev) => ({ ...prev, name: event.target.value }))
+                    }
+                    required
+                    className="rounded-2xl border border-white/10 bg-slate-900/70 px-4 py-3 text-sm text-white focus:border-primary focus:ring-2 focus:ring-primary/40"
+                  />
+                </label>
+                <label className="flex flex-col gap-2 text-sm">
+                  <span className="text-white/70">Address *</span>
+                  <textarea
+                    value={editModal.address}
+                    onChange={(event) =>
+                      setEditModal((prev) => ({ ...prev, address: event.target.value }))
+                    }
+                    required
+                    rows={3}
+                    className="rounded-2xl border border-white/10 bg-slate-900/70 px-4 py-3 text-sm text-white focus:border-primary focus:ring-2 focus:ring-primary/40"
+                  />
+                </label>
                 <div className="grid gap-3 sm:grid-cols-2">
-                  <input
-                    placeholder="City"
-                    value={editModal.city}
-                    onChange={(event) =>
-                      setEditModal((prev) => ({ ...prev, city: event.target.value }))
-                    }
-                    className="rounded-2xl border border-white/10 bg-slate-900/70 px-4 py-3 text-sm text-white focus:border-primary focus:ring-2 focus:ring-primary/40"
-                  />
-                  <input
-                    placeholder="State"
-                    value={editModal.state}
-                    onChange={(event) =>
-                      setEditModal((prev) => ({ ...prev, state: event.target.value }))
-                    }
-                    className="rounded-2xl border border-white/10 bg-slate-900/70 px-4 py-3 text-sm text-white focus:border-primary focus:ring-2 focus:ring-primary/40"
-                  />
+                  <label className="flex flex-col gap-2 text-sm">
+                    <span className="text-white/70">City *</span>
+                    <input
+                      value={editModal.city}
+                      onChange={(event) =>
+                        setEditModal((prev) => ({ ...prev, city: event.target.value }))
+                      }
+                      required
+                      className="rounded-2xl border border-white/10 bg-slate-900/70 px-4 py-3 text-sm text-white focus:border-primary focus:ring-2 focus:ring-primary/40"
+                    />
+                  </label>
+                  <label className="flex flex-col gap-2 text-sm">
+                    <span className="text-white/70">State *</span>
+                    <input
+                      value={editModal.state}
+                      onChange={(event) =>
+                        setEditModal((prev) => ({ ...prev, state: event.target.value }))
+                      }
+                      required
+                      className="rounded-2xl border border-white/10 bg-slate-900/70 px-4 py-3 text-sm text-white focus:border-primary focus:ring-2 focus:ring-primary/40"
+                    />
+                  </label>
+                  <label className="flex flex-col gap-2 text-sm">
+                    <span className="text-white/70">Pincode *</span>
+                    <input
+                      value={editModal.pincode}
+                      onChange={(event) =>
+                        setEditModal((prev) => ({ ...prev, pincode: event.target.value }))
+                      }
+                      required
+                      className="rounded-2xl border border-white/10 bg-slate-900/70 px-4 py-3 text-sm text-white focus:border-primary focus:ring-2 focus:ring-primary/40"
+                    />
+                  </label>
+                  <label className="flex flex-col gap-2 text-sm">
+                    <span className="text-white/70">Email</span>
+                    <input
+                      value={editModal.email}
+                      onChange={(event) =>
+                        setEditModal((prev) => ({ ...prev, email: event.target.value }))
+                      }
+                      className="rounded-2xl border border-white/10 bg-slate-900/70 px-4 py-3 text-sm text-white focus:border-primary focus:ring-2 focus:ring-primary/40"
+                    />
+                  </label>
                 </div>
-                <input
-                  placeholder="Contact Person"
-                  value={editModal.contact_person}
-                  onChange={(event) =>
-                    setEditModal((prev) => ({ ...prev, contact_person: event.target.value }))
-                  }
-                  className="rounded-2xl border border-white/10 bg-slate-900/70 px-4 py-3 text-sm text-white focus:border-primary focus:ring-2 focus:ring-primary/40"
-                />
-                <input
-                  placeholder="Phone"
-                  value={editModal.phone}
-                  onChange={(event) =>
-                    setEditModal((prev) => ({ ...prev, phone: event.target.value }))
-                  }
-                  className="rounded-2xl border border-white/10 bg-slate-900/70 px-4 py-3 text-sm text-white focus:border-primary focus:ring-2 focus:ring-primary/40"
-                />
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="rounded-2xl border border-white/20 bg-white/10 px-4 py-3 text-sm font-semibold text-white transition hover:bg-white/20 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {saving ? 'Saving...' : 'Save Changes'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setEditModal(null)}
-                  className="rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm font-semibold text-red-200 transition hover:bg-red-500/20"
-                >
-                  Cancel
-                </button>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <label className="flex flex-col gap-2 text-sm">
+                    <span className="text-white/70">Contact Person *</span>
+                    <input
+                      value={editModal.contact_person}
+                      onChange={(event) =>
+                        setEditModal((prev) => ({ ...prev, contact_person: event.target.value }))
+                      }
+                      required
+                      className="rounded-2xl border border-white/10 bg-slate-900/70 px-4 py-3 text-sm text-white focus:border-primary focus:ring-2 focus:ring-primary/40"
+                    />
+                  </label>
+                  <label className="flex flex-col gap-2 text-sm">
+                    <span className="text-white/70">Contact Phone *</span>
+                    <input
+                      value={editModal.phone}
+                      onChange={(event) =>
+                        setEditModal((prev) => ({ ...prev, phone: event.target.value }))
+                      }
+                      required
+                      className="rounded-2xl border border-white/10 bg-slate-900/70 px-4 py-3 text-sm text-white focus:border-primary focus:ring-2 focus:ring-primary/40"
+                    />
+                  </label>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <label className="flex flex-col gap-2 text-sm">
+                    <span className="text-white/70">GSTIN (optional)</span>
+                    <input
+                      value={editModal.gstin}
+                      onChange={(event) =>
+                        setEditModal((prev) => ({ ...prev, gstin: event.target.value.toUpperCase() }))
+                      }
+                      className="rounded-2xl border border-white/10 bg-slate-900/70 px-4 py-3 text-sm text-white focus:border-primary focus:ring-2 focus:ring-primary/40"
+                      placeholder="22AAAAA0000A1Z5"
+                    />
+                  </label>
+                  <label className="flex flex-col gap-2 text-sm">
+                    <span className="text-white/70">Drug License Number (optional)</span>
+                    <input
+                      value={editModal.drug_license}
+                      onChange={(event) =>
+                        setEditModal((prev) => ({ ...prev, drug_license: event.target.value }))
+                      }
+                      className="rounded-2xl border border-white/10 bg-slate-900/70 px-4 py-3 text-sm text-white focus:border-primary focus:ring-2 focus:ring-primary/40"
+                      placeholder="DL-XXXX-XXXX"
+                    />
+                  </label>
+                </div>
+                <div className="mt-2 flex justify-end gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setEditModal(null)}
+                    className="rounded-full border border-white/20 px-4 py-2 text-sm text-white/70 hover:bg-white/10"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={saving}
+                    className="rounded-full bg-primary px-5 py-2 text-sm font-semibold text-white transition hover:bg-primary-dark disabled:cursor-wait"
+                  >
+                    {saving ? 'Saving…' : 'Save Changes'}
+                  </button>
+                </div>
               </form>
             </FluentCard>
           )}

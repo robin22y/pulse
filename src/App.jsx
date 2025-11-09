@@ -4,6 +4,7 @@ import LoginPage from './pages/LoginPage.jsx'
 import OwnerDashboard from './pages/OwnerDashboard.jsx'
 import StaffManagement from './pages/StaffManagement.jsx'
 import HospitalManagement from './pages/HospitalManagement.jsx'
+import ProductMaster from './pages/ProductMaster.jsx'
 import ProductManagement from './pages/ProductManagement.jsx'
 import CreateConsignment from './pages/CreateConsignment.jsx'
 import DeliveryApp from './pages/DeliveryApp.jsx'
@@ -17,6 +18,10 @@ import ShellLayout from './components/ShellLayout.jsx'
 import StaffDashboard from './pages/StaffDashboard.jsx'
 import UnauthorizedPage from './pages/UnauthorizedPage.jsx'
 import { resolveLandingRoute } from './utils/navigation.js'
+import StockManagementPage from './pages/StockManagementPage'
+import SettingsPage from './pages/SettingsPage.jsx'
+import ConsignmentsList from './pages/ConsignmentsList.jsx'
+import DCPreviewPage from './pages/DCPreviewPage.jsx'
 
 const ProtectedRoute = ({ children, allowedRoles }) => {
   const { role, user, loading } = useAuth()
@@ -84,11 +89,31 @@ const App = () => {
         }
       />
       <Route
+        path="/owner/products"
+        element={
+          <ProtectedRoute allowedRoles={['owner', 'admin']}>
+            <ShellLayout>
+              <ProductMaster />
+            </ShellLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/owner/branches"
         element={
           <ProtectedRoute allowedRoles={['owner', 'admin']}>
             <ShellLayout>
               <BranchManagement />
+            </ShellLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/owner/stock"
+        element={
+          <ProtectedRoute allowedRoles={['owner', 'admin']}>
+            <ShellLayout>
+              <StockManagementPage />
             </ShellLayout>
           </ProtectedRoute>
         }
@@ -120,6 +145,34 @@ const App = () => {
             <ShellLayout>
               <BillingEntry />
             </ShellLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/owner/settings"
+        element={
+          <ProtectedRoute allowedRoles={['owner', 'admin']}>
+            <ShellLayout>
+              <SettingsPage />
+            </ShellLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/owner/consignments"
+        element={
+          <ProtectedRoute allowedRoles={['owner', 'admin', 'manager']}>
+            <ShellLayout>
+              <ConsignmentsList />
+            </ShellLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/owner/consignments/:id"
+        element={
+          <ProtectedRoute allowedRoles={['owner', 'admin', 'manager', 'delivery']}>
+            <DCPreviewPage />
           </ProtectedRoute>
         }
       />

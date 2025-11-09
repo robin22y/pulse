@@ -6,13 +6,20 @@ import BottomNavigation from './navigation/BottomNavigation.jsx'
 const NAV_ITEMS = {
   owner: [
     { label: 'Dashboard', path: '/dashboard', icon: 'dashboard' },
+    { label: 'Products', path: '/owner/products', icon: 'inventory' },
+    { label: 'Stock', path: '/owner/stock', icon: 'package' },
     { label: 'Staff', path: '/owner/staff', icon: 'people' },
-    { label: 'Consign', path: '/consignments/create', icon: 'package' },
+    { label: 'Consignments', path: '/owner/consignments', icon: 'report' },
+    { label: 'Create DC', path: '/consignments/create', icon: 'package' },
     { label: 'Reports', path: '/owner/reports', icon: 'report' },
+    { label: 'Settings', path: '/owner/settings', icon: 'settings' },
   ],
   manager: [
     { label: 'Dashboard', path: '/dashboard', icon: 'dashboard' },
+    { label: 'Products', path: '/owner/products', icon: 'inventory' },
+    { label: 'Stock', path: '/owner/stock', icon: 'package' },
     { label: 'Staff', path: '/owner/staff', icon: 'people' },
+    { label: 'Consignments', path: '/owner/consignments', icon: 'report' },
     { label: 'Inventory', path: '/inventory/products', icon: 'inventory' },
     { label: 'Delivery', path: '/delivery', icon: 'delivery' },
   ],
