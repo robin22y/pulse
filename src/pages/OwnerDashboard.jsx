@@ -26,14 +26,13 @@ import {
   PackageSearch,
   PackagePlus,
 } from 'lucide-react'
+import { motion } from 'framer-motion'
 import FluentCard from '../components/FluentCard.jsx'
 import { useAuth } from '../contexts/AuthContext.jsx'
 import { supabase } from '../utils/supabaseClient.js'
 import NavTile from '../components/dashboard/NavTile.jsx'
 import StatCard from '../components/dashboard/StatCard.jsx'
 import RecentDCCard from '../components/dashboard/RecentDCCard.jsx'
-import PageHeader from '../components/layout/PageHeader.jsx'
-import PulseLogo from '../components/PulseLogo.jsx'
 
 const OwnerDashboard = () => {
   const navigate = useNavigate()
@@ -59,24 +58,16 @@ const OwnerDashboard = () => {
       setError('')
       try {
         const [
-          { data: consignmentData, error: consignmentError },
-          { data: deliveryData, error: deliveryError },
+          { data: deliveryRows, error: deliveryError },
           { data: staffData, error: staffError },
           { data: inventoryData, error: inventoryError },
         ] = await Promise.all([
           supabase
-            .from('consignments')
-            .select(
-              'id, hospital_id, status, total_value, dc_number, dispatched_at, delivered_at, created_at',
-            )
+            .from('delivery_summary_view')
+            .select('*')
             .eq('owner_id', ownerId)
-            .order('created_at', { ascending: false })
+            .order('delivered_at', { ascending: false })
             .limit(120),
-          supabase
-            .from('consignments')
-            .select('id')
-            .eq('owner_id', ownerId)
-            .eq('status', 'delivered'),
           supabase
             .from('users')
             .select('id, full_name, role, owner_id, manager_id')
@@ -87,8 +78,8 @@ const OwnerDashboard = () => {
             .eq('owner_id', ownerId),
         ])
 
-        if (consignmentError || deliveryError || staffError || inventoryError) {
-          throw consignmentError ?? deliveryError ?? staffError ?? inventoryError
+        if (deliveryError || staffError || inventoryError) {
+          throw deliveryError ?? staffError ?? inventoryError
         }
 
         let productTotals = { total_products: 0, products_in_stock: 0 }
@@ -109,12 +100,13 @@ const OwnerDashboard = () => {
           console.warn('Unable to load product directory stats', rpcErr)
         }
 
-        setConsignments(consignmentData ?? [])
+        setConsignments(deliveryRows ?? [])
         setInventory(inventoryData ?? [])
         setUsers(staffData ?? [])
+        const deliveredCount = (deliveryRows ?? []).filter((row) => row.status === 'delivered').length
         setOverview({
-          consignments: consignmentData?.length ?? 0,
-          deliveries: deliveryData?.length ?? 0,
+          consignments: deliveryRows?.length ?? 0,
+          deliveries: deliveredCount,
           staff: staffData?.length ?? 0,
           inventoryValue: inventoryData?.reduce((total, item) => {
             const price = Number(item.unit_price ?? 0)
@@ -251,13 +243,42 @@ const OwnerDashboard = () => {
     { icon: Settings, label: 'Settings', subtitle: 'Configure app', color: 'gray', to: '/owner/settings' },
   ]
 
+  const firstName = useMemo(() => profile?.full_name?.split(' ')[0] ?? 'there', [profile?.full_name])
+
+  const greeting = useMemo(() => {
+    const hour = new Date().getHours()
+    if (hour < 6) return { title: `Burning midnight oil, ${firstName}? 🌙`, subtitle: "Let's make magic happen ⚡" }
+    if (hour < 12) return { title: `Good morning, ${firstName}! ☀️`, subtitle: "Fresh day, fresh wins 🚀" }
+    if (hour < 17) return { title: `Afternoon, ${firstName}! 💪`, subtitle: 'Keep the rhythm going 🎶' }
+    if (hour < 21) return { title: `Evening, ${firstName}! 🌆`, subtitle: 'Wrap strong, finish stronger 🔥' }
+    return { title: `Late night grind, ${firstName}? 🦉`, subtitle: "Legends are built after hours ✨" }
+  }, [firstName])
+
   return (
     <>
-      <PageHeader
-        title="Owner Dashboard"
-        description={`Welcome back ${profile?.full_name ?? profile?.email ?? ''}. Here is a snapshot of your operations.`}
-        actions={null}
-      />
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="flex flex-col gap-2"
+      >
+        <motion.h1
+          initial={{ opacity: 0, y: -16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1, duration: 0.6 }}
+          className="bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-4xl font-black tracking-tight text-transparent"
+        >
+          {greeting.title}
+        </motion.h1>
+        <motion.p
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2, duration: 0.6 }}
+          className="text-sm text-white/70"
+        >
+          {greeting.subtitle}
+        </motion.p>
+      </motion.div>
       <div className="flex flex-col gap-6">
         {/* Mobile Experience */}
         <div className="mobile-dashboard flex flex-col bg-slate-950 md:hidden">
@@ -300,6 +321,13 @@ const OwnerDashboard = () => {
                     createdAt={consignment.created_at}
                     status={consignment.status ?? 'prepared'}
                     value={consignment.total_value}
+                    location={
+                      consignment.delivery_road_name
+                        ? consignment.delivery_road_name
+                        : consignment.delivery_latitude && consignment.delivery_longitude
+                          ? `${Number(consignment.delivery_latitude).toFixed(3)}, ${Number(consignment.delivery_longitude).toFixed(3)}`
+                          : ''
+                    }
                   />
                 ))}
                 {!recentConsignments.length && (

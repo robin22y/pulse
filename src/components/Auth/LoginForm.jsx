@@ -16,8 +16,9 @@ const LoginForm = ({ onSuccess }) => {
 
     try {
       await loginWithPassword({
-        email: formData.email.trim(),
+        username: formData.email.trim().toLowerCase(),
         password: formData.password,
+        isEmail: true,
       })
       onSuccess?.()
     } catch (err) {

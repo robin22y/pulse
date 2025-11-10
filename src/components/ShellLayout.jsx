@@ -5,7 +5,8 @@ import BottomNavigation from './navigation/BottomNavigation.jsx'
 
 const NAV_ITEMS = {
   owner: [
-    { label: 'Dashboard', path: '/dashboard', icon: 'dashboard' },
+    { label: 'Dashboard', path: '/owner', icon: 'dashboard' },
+    { label: 'Deliveries', path: '/owner/deliveries', icon: 'delivery' },
     { label: 'Products', path: '/owner/products', icon: 'inventory' },
     { label: 'Stock', path: '/owner/stock', icon: 'package' },
     { label: 'Staff', path: '/owner/staff', icon: 'people' },
@@ -13,7 +14,8 @@ const NAV_ITEMS = {
     { label: 'Settings', path: '/owner/settings', icon: 'settings' },
   ],
   admin: [
-    { label: 'Dashboard', path: '/dashboard', icon: 'dashboard' },
+    { label: 'Dashboard', path: '/owner', icon: 'dashboard' },
+    { label: 'Deliveries', path: '/owner/deliveries', icon: 'delivery' },
     { label: 'Products', path: '/owner/products', icon: 'inventory' },
     { label: 'Stock', path: '/owner/stock', icon: 'package' },
     { label: 'Staff', path: '/owner/staff', icon: 'people' },
@@ -22,6 +24,7 @@ const NAV_ITEMS = {
   ],
   manager: [
     { label: 'Team', path: '/owner/staff', icon: 'people' },
+    { label: 'Deliveries', path: '/owner/deliveries', icon: 'delivery' },
     { label: 'Consignments', path: '/owner/consignments', icon: 'report' },
     { label: 'Inventory', path: '/inventory/products', icon: 'inventory' },
     { label: 'Delivery', path: '/delivery', icon: 'delivery' },

@@ -194,6 +194,22 @@ body {
   background-clip: text;
 }
 
+@media (min-width: 768px) {
+  .bg-gray-900 {
+    background-image:
+      radial-gradient(circle at 20% 50%, rgba(59, 130, 246, 0.05) 0%, transparent 50%),
+      radial-gradient(circle at 80% 80%, rgba(139, 92, 246, 0.05) 0%, transparent 50%);
+  }
+}
+
+button {
+  transition: all 0.2s ease;
+}
+
+button:active {
+  transform: scale(0.98);
+}
+
 @media (max-width: 640px) {
   .acrylic-card {
     border-radius: 0;

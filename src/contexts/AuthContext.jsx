@@ -13,8 +13,8 @@ const AuthContext = createContext({
   profile: null,
   loading: true,
   loginWithPassword: async () => {},
-  loginWithPin: async () => {},
   logout: async () => {},
+  refreshProfile: async () => {},
 })
 
 export const AuthProvider = ({ children }) => {
@@ -30,7 +30,7 @@ export const AuthProvider = ({ children }) => {
 
     const { data, error } = await supabase
       .from('users')
-      .select('*')
+      .select('id, username, full_name, role, owner_id, must_change_password')
       .eq('id', userId)
       .maybeSingle()
 
@@ -62,65 +62,34 @@ export const AuthProvider = ({ children }) => {
 
     init()
 
-    // Temporarily disable auth state change listener while debugging signup hang
-    // const { data: listener } = supabase.auth.onAuthStateChange(
-    //   async (_event, newSession) => {
-    //     setSession(newSession)
-    //     if (newSession?.user?.id) {
-    //       await loadProfile(newSession.user.id)
-    //     } else {
-    //       setProfile(null)
-    //     }
-    //   },
-    // )
+    const { data: listener } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
+      setSession(newSession)
+      if (newSession?.user?.id) {
+        await loadProfile(newSession.user.id)
+      } else {
+        setProfile(null)
+      }
+    })
 
     return () => {
-      // listener?.subscription?.unsubscribe()
+      listener.subscription.unsubscribe()
     }
   }, [loadProfile])
 
-  const loginWithPassword = useCallback(async ({ email, password }) => {
-    setLoading(true)
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
-    setLoading(false)
-    if (error) {
-      throw error
-    }
-
-    setSession(data.session)
-    if (data.session?.user?.id) {
-      await loadProfile(data.session.user.id)
-    }
-    return data
-  }, [loadProfile])
-
-  const loginWithPin = useCallback(
-    async ({ pin }) => {
+  const loginWithPassword = useCallback(
+    async ({ username, password, isEmail = false }) => {
       setLoading(true)
-      const { data, error } = await supabase.rpc('login_with_pin', { pin_code: pin })
+      const email = isEmail ? username : `${username.trim()}@pulse.internal`
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password })
       if (error) {
         setLoading(false)
         throw error
       }
 
-      // Expecting RPC to return { session, user, profile }
-      if (data?.session) {
-        const { session: rpcSession } = data
-        const { error: setSessionError } = await supabase.auth.setSession({
-          access_token: rpcSession.access_token,
-          refresh_token: rpcSession.refresh_token,
-        })
-        if (setSessionError) {
-          console.error('Failed to set session from PIN login', setSessionError)
-        } else {
-          setSession(rpcSession)
-          await loadProfile(rpcSession.user.id)
-        }
-      } else if (data?.user?.id) {
-        setSession((prev) => ({ ...prev, user: data.user }))
-        setProfile(data.user)
+      setSession(data.session)
+      if (data.session?.user?.id) {
+        await loadProfile(data.session.user.id)
       }
-
       setLoading(false)
       return data
     },
@@ -145,12 +114,13 @@ export const AuthProvider = ({ children }) => {
       profile,
       loading,
       role: profile?.role,
+      mustChangePassword: profile?.must_change_password ?? false,
       ownerId: profile?.owner_id ?? profile?.id ?? null,
       loginWithPassword,
-      loginWithPin,
       logout,
+      refreshProfile: loadProfile,
     }),
-    [session, profile, loading, loginWithPassword, loginWithPin, logout],
+    [session, profile, loading, loginWithPassword, logout, loadProfile],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

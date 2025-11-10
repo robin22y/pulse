@@ -1,8 +1,10 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { useAuth } from './contexts/AuthContext.jsx'
-import LoginPage from './pages/LoginPage.jsx'
+import Login from './pages/Login.jsx'
+import ChangePassword from './pages/ChangePassword.jsx'
+import ProtectedRoute from './components/ProtectedRoute.jsx'
 import OwnerDashboard from './pages/OwnerDashboard.jsx'
-import StaffManagement from './pages/StaffManagement.jsx'
+import UserManagement from './pages/UserManagement.jsx'
 import HospitalManagement from './pages/HospitalManagement.jsx'
 import ProductMaster from './pages/ProductMaster.jsx'
 import ProductManagement from './pages/ProductManagement.jsx'
@@ -12,54 +14,39 @@ import ReportsPage from './pages/ReportsPage.jsx'
 import StockLocationTracker from './pages/StockLocationTracker.jsx'
 import BillingEntry from './pages/BillingEntry.jsx'
 import BranchManagement from './pages/BranchManagement.jsx'
-import StaffPINLogin from './pages/StaffPINLogin.jsx'
-import ChangePINPage from './pages/ChangePINPage.jsx'
 import ShellLayout from './components/ShellLayout.jsx'
 import StaffDashboard from './pages/StaffDashboard.jsx'
-import UnauthorizedPage from './pages/UnauthorizedPage.jsx'
-import { resolveLandingRoute } from './utils/navigation.js'
-import StockManagementPage from './pages/StockManagementPage'
 import SettingsPage from './pages/SettingsPage.jsx'
 import ConsignmentsList from './pages/ConsignmentsList.jsx'
 import DCPreviewPage from './pages/DCPreviewPage.jsx'
-
-const ProtectedRoute = ({ children, allowedRoles }) => {
-  const { role, user, loading } = useAuth()
-
-  if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-950/80 text-slate-200">
-        <div className="h-16 w-16 animate-spin rounded-full border-4 border-primary-light border-t-primary"></div>
-      </div>
-    )
-  }
-
-  if (!user || !role) {
-    return <Navigate to="/" replace />
-  }
-
-  if (allowedRoles && !allowedRoles.includes(role)) {
-    return <Navigate to="/unauthorized" replace />
-  }
-
-  return children
-}
+import DeliverySummaryPage from './pages/DeliverySummaryPage.jsx'
+import StockManagementPage from './pages/StockManagementPage'
+import { resolveLandingRoute } from './utils/navigation.js'
+import Signup from './pages/Signup.jsx'
 
 const App = () => {
   const { role } = useAuth()
-  const preferredRoute = role ? resolveLandingRoute(role) : '/'
+  const preferredRoute = role ? resolveLandingRoute(role) : '/login'
 
   return (
     <Routes>
       {/* Public routes */}
-      <Route path="/" element={<LoginPage />} />
-      <Route path="/staff/:ownerId" element={<StaffPINLogin />} />
-      <Route path="/:business/:staff" element={<StaffPINLogin />} />
-      <Route path="/unauthorized" element={<UnauthorizedPage />} />
+      <Route path="/" element={<Login />} />
+      <Route path="/login" element={<Login />} />
+      <Route path="/signup" element={<Signup />} />
 
-      {/* Owner/Admin routes */}
       <Route
-        path="/dashboard"
+        path="/change-password"
+        element={
+          <ProtectedRoute>
+            <ChangePassword />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Owner/Admin area */}
+      <Route
+        path="/owner"
         element={
           <ProtectedRoute allowedRoles={['owner', 'admin']}>
             <ShellLayout>
@@ -73,7 +60,7 @@ const App = () => {
         element={
           <ProtectedRoute allowedRoles={['owner', 'admin', 'manager']}>
             <ShellLayout>
-              <StaffManagement />
+              <UserManagement />
             </ShellLayout>
           </ProtectedRoute>
         }
@@ -176,8 +163,18 @@ const App = () => {
           </ProtectedRoute>
         }
       />
+      <Route
+        path="/owner/deliveries"
+        element={
+          <ProtectedRoute allowedRoles={['owner', 'admin', 'manager']}>
+            <ShellLayout>
+              <DeliverySummaryPage />
+            </ShellLayout>
+          </ProtectedRoute>
+        }
+      />
 
-      {/* Staff routes */}
+      {/* Staff area */}
       <Route
         path="/staff"
         element={
@@ -188,6 +185,8 @@ const App = () => {
           </ProtectedRoute>
         }
       />
+
+      {/* Shared inventory/consignment routes */}
       <Route
         path="/inventory/products"
         element={
@@ -208,22 +207,15 @@ const App = () => {
           </ProtectedRoute>
         }
       />
+
+      {/* Delivery area */}
       <Route
         path="/delivery"
         element={
           <ProtectedRoute allowedRoles={['delivery', 'owner', 'manager', 'staff']}>
-            <ShellLayout mobileOnly>
+            <ShellLayout>
               <DeliveryApp />
             </ShellLayout>
-          </ProtectedRoute>
-        }
-      />
-
-      <Route
-        path="/change-pin"
-        element={
-          <ProtectedRoute>
-            <ChangePINPage />
           </ProtectedRoute>
         }
       />
