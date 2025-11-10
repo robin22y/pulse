@@ -212,7 +212,7 @@ const App = () => {
       <Route
         path="/delivery"
         element={
-          <ProtectedRoute allowedRoles={['delivery', 'owner', 'manager', 'staff']}>
+          <ProtectedRoute allowedRoles={['delivery']}>
             <ShellLayout>
               <DeliveryApp />
             </ShellLayout>

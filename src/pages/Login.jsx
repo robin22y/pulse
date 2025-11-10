@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate, useLocation, Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Eye, EyeOff, Loader2 } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext.jsx'
@@ -12,7 +12,8 @@ const usernameKey = 'pulse-login-username'
 
 const Login = () => {
   const navigate = useNavigate()
-  const { role, loading: authLoading, loginWithPassword } = useAuth()
+  const location = useLocation()
+  const { role, loading: authLoading, loginWithPassword, mustChangePassword } = useAuth()
 
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
@@ -31,11 +32,20 @@ const Login = () => {
   }, [])
 
   useEffect(() => {
-    if (!authLoading && role) {
-      const target = resolveLandingRoute(role)
-      navigate(target, { replace: true })
+    if (authLoading) return
+
+    if (mustChangePassword) {
+      navigate('/change-password', { replace: true })
+      return
     }
-  }, [role, authLoading, navigate])
+
+    if (role) {
+      const target = resolveLandingRoute(role)
+      if (location.pathname !== target) {
+        navigate(target, { replace: true })
+      }
+    }
+  }, [role, authLoading, mustChangePassword, navigate, location.pathname])
 
   const handleLogin = async (event) => {
     event.preventDefault()

@@ -85,7 +85,14 @@ const DeliveryApp = () => {
 
     if (!resolved?.id) {
       setLoading(false)
-      navigate('/staff/login', { replace: true })
+      navigate('/login', { replace: true })
+      return
+    }
+
+    if (resolved.role !== 'delivery') {
+      setLoading(false)
+      setBanner('Only delivery teammates can close deliveries 😅')
+      setBannerTone('error')
       return
     }
 
@@ -104,9 +111,9 @@ const DeliveryApp = () => {
 
   const handleComplete = useCallback(
     async (consignment) => {
-      if (!staffUser?.id) {
-        alert('❌ Unable to identify staff user. Please log in again.')
-        navigate('/staff/login', { replace: true })
+      if (!staffUser?.id || staffUser?.role !== 'delivery') {
+        alert('❌ Only delivery teammates can complete DCs.')
+        navigate('/login', { replace: true })
         return
       }
 

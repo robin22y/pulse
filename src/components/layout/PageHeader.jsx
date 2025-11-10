@@ -1,4 +1,4 @@
-import { useCallback } from 'react'
+import { useMemo } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import PulseLogo from '../PulseLogo.jsx'
 import { useAuth } from '../../contexts/AuthContext.jsx'
@@ -9,12 +9,14 @@ const PageHeader = ({ title, description, actions }) => {
   const location = useLocation()
   const { profile, logout } = useAuth()
 
-  const goToDashboard = useCallback(() => {
-    const destination = resolveLandingRoute(profile?.role)
-    if (location.pathname !== destination) {
-      navigate(destination)
+  const dashboardTarget = useMemo(() => resolveLandingRoute(profile?.role), [profile?.role])
+  const isOnDashboard = location.pathname === dashboardTarget
+
+  const handleNavigateDashboard = () => {
+    if (!isOnDashboard && dashboardTarget) {
+      navigate(dashboardTarget)
     }
-  }, [location.pathname, navigate, profile?.role])
+  }
 
   const handleSignOut = useCallback(async () => {
     try {
@@ -33,8 +35,9 @@ const PageHeader = ({ title, description, actions }) => {
             <PulseLogo size="default" variant="white" />
             <button
               type="button"
-              onClick={goToDashboard}
+              onClick={handleNavigateDashboard}
               className="group relative inline-flex items-center overflow-hidden rounded-full border border-white/30 px-6 py-2 text-xs font-semibold uppercase tracking-[0.5em] text-white/70 transition hover:text-white"
+              disabled={isOnDashboard}
             >
               <span className="absolute inset-0 bg-gradient-to-r from-blue-500/20 via-purple-500/30 to-pink-500/20 opacity-0 transition group-hover:opacity-100" />
               <span className="relative">Go to Dashboard</span>
@@ -43,8 +46,9 @@ const PageHeader = ({ title, description, actions }) => {
           <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={goToDashboard}
-              className="rounded-full border border-white/30 px-5 py-2 text-xs font-semibold uppercase tracking-widest text-white transition hover:bg-white/10 active:scale-95"
+              onClick={handleNavigateDashboard}
+              className="rounded-full border border-white/30 px-5 py-2 text-xs font-semibold uppercase tracking-widest text-white transition hover:bg-white/10 active:scale-95 disabled:cursor-not-allowed disabled:opacity-60"
+              disabled={isOnDashboard}
             >
               Dashboard
             </button>

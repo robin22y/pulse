@@ -9,8 +9,12 @@ const roleOptions = [
 ]
 
 const randomPassword = () => {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789@$!%*?&'
-  return Array.from({ length: 12 }, () => chars[Math.floor(Math.random() * chars.length)]).join('')
+  const words = ['Pulse', 'Rhythm', 'Rocket', 'Alpha', 'Hyper', 'Nova', 'Orbit', 'Swift', 'Turbo', 'Velocity']
+  const endings = ['!', '@', '$', '&', 'X']
+  const word = words[Math.floor(Math.random() * words.length)]
+  const year = new Date().getFullYear()
+  const suffix = endings[Math.floor(Math.random() * endings.length)]
+  return `${word}${year}${suffix}`
 }
 
 const sanitizeUsername = (fullName) =>
@@ -20,13 +24,15 @@ const sanitizeUsername = (fullName) =>
     .replace(/^\.+|\.+$/g, '')
     .slice(0, 20)
 
-const AddUserModal = ({ open, onClose }) => {
+const AddUserModal = ({ open, onClose, onCreate }) => {
   const [fullName, setFullName] = useState('')
   const [username, setUsername] = useState('')
   const [role, setRole] = useState(roleOptions[0].value)
   const [phone, setPhone] = useState('')
   const [password, setPassword] = useState(randomPassword())
   const [showCredentials, setShowCredentials] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState('')
 
   useEffect(() => {
     if (!open) return
@@ -36,6 +42,8 @@ const AddUserModal = ({ open, onClose }) => {
     setPhone('')
     setPassword(randomPassword())
     setShowCredentials(false)
+    setSubmitting(false)
+    setError('')
   }, [open])
 
   const email = useMemo(() => (username ? `${username}@pulse.internal` : ''), [username])
@@ -44,10 +52,47 @@ const AddUserModal = ({ open, onClose }) => {
     setPassword(randomPassword())
   }
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault()
-    if (!fullName.trim() || !username.trim()) return
-    setShowCredentials(true)
+    setError('')
+
+    const trimmedName = fullName.trim()
+    const trimmedUsername = username.trim().toLowerCase()
+
+    if (!trimmedName || !trimmedUsername) {
+      setError('Fill out the name and username 🤔')
+      return
+    }
+
+    if (trimmedUsername.length < 3) {
+      setError('Username needs at least 3 characters 💪')
+      return
+    }
+
+    setSubmitting(true)
+    try {
+      const result = await onCreate?.({
+        fullName: trimmedName,
+        username: trimmedUsername,
+        role,
+        phone: phone.trim() || null,
+        temporaryPassword: password,
+      })
+
+      if (!result?.success) {
+        throw new Error(result?.error || 'Unable to create teammate 😅')
+      }
+
+      if (result?.temporaryPassword) {
+        setPassword(result.temporaryPassword)
+      }
+      setShowCredentials(true)
+    } catch (err) {
+      console.error('Create teammate failed', err)
+      setError(err.message ?? 'Unable to create teammate 😅')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   const copyCredentials = async () => {
@@ -167,11 +212,25 @@ const AddUserModal = ({ open, onClose }) => {
 
             <button
               type="submit"
-              className="rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 py-3 text-sm font-semibold text-white shadow-lg transition hover:shadow-xl"
+              disabled={submitting}
+              className="rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 py-3 text-sm font-semibold text-white shadow-lg transition hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-60"
             >
-              Show credentials
+              {submitting ? 'Creating teammate… ⚙️' : 'Create teammate'}
             </button>
           </form>
+
+          <AnimatePresence>
+            {error && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="mt-4 rounded-2xl border border-pink-400/40 bg-pink-500/10 p-3 text-sm text-pink-100"
+              >
+                {error}
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           <AnimatePresence>
             {showCredentials && (
@@ -182,7 +241,7 @@ const AddUserModal = ({ open, onClose }) => {
                 className="mt-6 space-y-4 rounded-2xl border border-emerald-400/40 bg-emerald-500/10 p-5 text-sm text-emerald-100"
               >
                 <p className="text-white">
-                  ✅ Credentials ready! Create this user inside Supabase Auth, then add matching entry in `users` table.
+                  ✅ Credentials ready! User saved to Pulse. Share details below.
                 </p>
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div className="rounded-xl border border-white/10 bg-black/20 p-4">

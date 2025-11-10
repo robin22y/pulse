@@ -58,10 +58,47 @@ const UserManagement = () => {
     )
   }
 
+  const handleCreateStaff = async ({ fullName, username, role, phone, temporaryPassword }) => {
+    if (!ownerId) throw new Error('Owner context missing 😅')
+
+    const { data, error: fnError } = await supabase.functions.invoke('manage-staff', {
+      body: {
+        action: 'createStaff',
+        payload: {
+          ownerId,
+          fullName,
+          username,
+          role,
+          phone,
+          temporaryPassword,
+        },
+      },
+    })
+
+    if (fnError) {
+      console.error('createStaff function error', fnError)
+      throw new Error(fnError.message ?? 'Edge function unreachable 😅')
+    }
+    if (!data?.success) {
+      throw new Error(data?.error || 'Unable to create teammate 😅')
+    }
+
+    await loadUsers()
+    setActionMessage(`Welcome aboard, ${fullName}! 🎉`)
+    return data
+  }
+
   const handleDelete = async (userId) => {
     if (!window.confirm('Delete this teammate? This cannot be undone.')) return
-    const { error: deleteError } = await supabase.from('users').delete().eq('id', userId)
-    if (deleteError) {
+    const { data, error: fnError } = await supabase.functions.invoke('manage-staff', {
+      body: {
+        action: 'deleteUser',
+        payload: {
+          userId,
+        },
+      },
+    })
+    if (fnError || !data?.success) {
       setActionMessage('Delete didn’t stick. Try again 😅')
     } else {
       setActionMessage('User removed. Onward! 🚀')
@@ -191,7 +228,7 @@ const UserManagement = () => {
         </table>
       </div>
 
-      <AddUserModal open={modalOpen} onClose={() => setModalOpen(false)} />
+      <AddUserModal open={modalOpen} onClose={() => setModalOpen(false)} onCreate={handleCreateStaff} />
     </div>
   )
 }
